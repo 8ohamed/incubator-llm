@@ -1,0 +1,390 @@
+\documentclass[12pt,a4paper]{article}
+
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{setspace}
+\setlength{\parindent}{0pt}
+\onehalfspacing
+
+% --- Content packages -------------------------------------------------------
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+  language=Python,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{black!55},
+  stringstyle=\color{black!70},
+  frame=single,
+  rulecolor=\color{black!25},
+  framesep=5pt,
+  xleftmargin=6pt,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  captionpos=b,
+  aboveskip=1.2em,
+  belowskip=1.2em,
+}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,calc}
+
+% --- Citations --------------------------------------------------------------
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
+
+% --- Links, loaded last so it wins on options ---------------------------------
+\usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+\usepackage{cleveref}
+
+\title{A Large Language Model Advisory Layer for an Existing Digital Twin:\\
+       \large A Tempeh Incubator Case Study}
+\author{Mohamed Abdulkarim \\ Computer Engineering, Aarhus University\\[0.6em]
+       \normalsize Supervisor: Cláudio Gomes}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+
+\newpage
+
+% =====================================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+\subsection{Digital twins and language models}
+\label{sec:background}
+
+A digital twin (DT) is a software system that mirrors a running physical system, with data
+moving automatically in both directions between the two
+\cite{fuller2020digitaltwin,kritzinger2018digitaltwin}. It is characterised by the services it
+offers on top of that connection, such as monitoring, decision support and reconfiguration, and
+it is not a control system: the physical system must keep working if the DT is switched off
+\cite{gomes2025incubator}. This project applies the same principle one level higher up, adding a
+layer on top of a DT that must keep working without that layer.
+
+A large language model (LLM) is a neural network trained on large quantities of text that can
+carry out a task described in ordinary language without being trained for it
+\cite{brown2020fewshot}. Its output can be fluent and still wrong, stating false quantities with
+confidence, a failure known as hallucination \cite{ji2023hallucination}. It can also call
+external code and continue with the returned value \cite{schick2023toolformer}, which shifts its
+responsibility from knowing a quantity to knowing which computation produces it.
+
+The two are complementary: a DT holds a calibrated model of a process, while an LLM is easy to
+address but has no reliable account of how any particular process behaves. Kleiman et al. build
+a framework on this pairing, placing an agent between the user and an existing simulation
+\cite{kleiman2025simulationagent}. Such a layer adds \emph{access}, turning the user's question
+into a correctly configured run, and \emph{interpretation}, turning the result into an
+explanation the user can act on, without the model needing to know the process itself. Two of
+the framework's design choices carry over \cite{kleiman2025simulationagent}: the simulation is
+called but never modified, and its raw output is reduced to compact summaries before the model
+sees it, because a full time series exceeds what a model can usefully consume.
+
+
+\subsection{The incubator digital twin}
+\label{sec:incubator-dt}
+
+This project builds on the incubator DT of Gomes et al. \cite{gomes2025incubator}: an insulated
+box with a heating element, a fan and temperature sensors, and a controller that switches the
+heater to hold the air at a setpoint. The box is used to ferment tempeh, a food made by growing a
+mould on cooked soybeans over roughly a day, whose success depends on the temperature staying
+within a fairly narrow range \cite{steinkraus1960tempeh,tempehinfo_temperature}. The DT consists
+of thermal models of the box, calibrated against its own measurements and kept supplied with live
+data, and offers three groups of services on top of them \cite{gomes2025incubator}:
+
+\begin{itemize}
+  \item \textbf{Visualisation and monitoring.} It presents the current and past state and
+    compares what the models predict with what the sensors report, estimating unmeasured
+    quantities from measured ones. A growing discrepancy signals that something has changed.
+  \item \textbf{Decision support.} It simulates scenarios before they happen, known as what-if
+    analysis, and searches across simulated configurations for the best trade-off. Gomes et al.
+    give two examples: heating the box above its setpoint before a power supply is replaced, with
+    simulation choosing how long to heat so that the batch neither overheats nor cools too far
+    during the outage; and mapping how controller settings trade tight temperature control
+    against heater wear.
+  \item \textbf{Reconfiguration.} When the models no longer match the hardware, it recalibrates
+    them against fresh data and re-tunes the controller.
+\end{itemize}
+
+None of these services is modified by this work.
+
+\subsection{The gap this project addresses}
+\label{sec:gap}
+
+Consider an operator who wants to open the lid of a running batch for five minutes, and wants to
+know beforehand whether the batch can take it. The DT can answer this in principle. It has
+calibrated thermal models, a representation of the disturbance an open lid causes, and a
+decision-support service meant for this kind of before-the-fact analysis; the power supply
+example is structurally the same problem \cite{gomes2025incubator}. The gap is not a missing
+capability but the distance between that capability and the person who needs it:
+
+\begin{itemize}
+  \item \textbf{Using the service means building the experiment.} A what-if analysis is a
+    simulation someone configures, choosing the model, the parameters that represent the
+    disturbance, the horizon and what to extract. An operator who knows fermentation but not
+    thermal parameters has no route to it.
+  \item \textbf{The service stops at numbers.} It returns a predicted temperature over time,
+    while the operator needs a judgement about the batch. That requires knowing what the culture
+    tolerates, for how long and at which stage, and the DT does not hold that knowledge: its
+    models describe the air in the box, not the culture in it.
+  \item \textbf{Every question has to be anticipated.} The published examples exist because
+    someone foresaw those situations and wrote code for them, so what the DT can be asked is
+    fixed at development time.
+\end{itemize}
+
+This project investigates a natural-language advisory layer on top of these services, which turns
+the operator's question into a correctly configured call and the result back into advice about
+the batch, without changing how the DT computes.
+
+\subsection{The LLM advisory layer architecture}
+\label{sec:architecture}
+
+The advisory is organised as three ordered layers (\Cref{fig:architecture}). A layer may call the
+one below it and never the one above, so a quantity reaches the operator only after something
+below has computed it.
+
+\begin{figure}[!ht]
+  \centering
+  \includegraphics[width=\textwidth]{llm_layer_arch.png}
+  \caption{The advisory layer in three ordered layers.}
+  \label{fig:architecture}
+\end{figure}
+
+The \textbf{language layer} recognises which advisory a question belongs to, converts what the
+operator said into that advisory's parameters, and puts the result into words. Reading ``five
+minutes'' as a duration is a unit conversion rather than a judgement, and it is the only
+arithmetic the layer performs.
+
+The \textbf{tool layer} carries out every calculation, as a pipeline. State access assembles the
+batch's current conditions, the simulation projects them forward under the disturbance asked
+about, and the risk assessment reduces the trajectory to a verdict, the numbers supporting it and
+the margin to the nearest boundary between verdicts. Only that judgement crosses back to the
+language layer, because turning a curve into a decision about the batch must not be left to
+prose. The second advisory, a heater boost, reuses the same pipeline as an optimisation: each
+candidate pre-heating strategy is scored by re-running the simulation and the risk assessment.
+
+The \textbf{sources} differ in where their authority comes from. The live DT state makes an
+answer concern this batch rather than batches in general. The DT's own models and controllers
+are driven from outside and never altered, so numerical authority stays with the DT
+\cite{gomes2025incubator}. Domain knowledge supplies the fermentation thresholds.
+
+
+\newpage
+\section{Implementation}
+\label{sec:implementation}
+
+\subsection{The sources}
+\label{sec:sources}
+
+Building the advisory starts at the bottom of \Cref{fig:architecture}, with the three sources
+every later number is drawn from (\Cref{tab:sources}). They fix what the layers above can say,
+and each can be trusted to a different degree.
+
+\begin{table}[htbp]
+    \centering
+    \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Source} & \textbf{Provides} & \textbf{Standing} \\
+    \midrule
+    Digital twin models & thermal and control behaviour & calibrated against the box \\
+    Domain knowledge & tempeh and heater limits & sourced or estimated \\
+    Current state & the running batch's condition & as published by the twin \\
+    \bottomrule
+    \end{tabular}
+    \caption{Three sources, what each contributes, and where its authority comes from.}
+    \label{tab:sources}
+\end{table}
+
+\textbf{The digital twin's models.} Four modules are taken from the twin: two plants, one
+carrying the air temperature and the box's heat loss and one adding the heater element, the
+controller's switching logic, and the wrapper that simulates a controller and a plant together
+\cite{gomes2025incubator}. They are used exactly as the twin defines them. Their calibrated
+parameters arrive with the current state rather than being written into this code, so a
+recalibration on the twin's side reaches the advisory with nothing here edited.
+
+What the models leave out bounds everything built on them. They predict the air in the box, not
+the batch in it: with no term for the batch's thermal mass, a real batch cools far more slowly
+than the predicted curve and never reaches its minimum, and with no term for the heat the culture
+produces, a predicted drop is pessimistic during active growth. The parameters were also fitted
+with the box empty and the lid closed, the open-lid disturbance is carried over from another
+calibration of the same incubator without being checked against a recording, and room
+temperature is held constant over the horizon.
+
+\textbf{The current state.} A single document stands in for what the twin publishes about the
+running batch: sensor readings, actuator settings, the filtered estimate of the box's
+temperature, the controller's settings, the calibrated model parameters, the open-lid parameters,
+and how far the batch has progressed. It is the only source that changes between one question
+and the next.
+
+\textbf{Domain knowledge.} One document holds what the twin does not (\Cref{tab:domain}). The
+temperature values follow the tempeh literature
+\cite{steinkraus1960tempeh,tempehinfo_temperature}; the bands, budgets and heater limits are
+reasoned values adopted for this system and marked as estimated. None has been calibrated
+against a batch that actually spoiled.
+
+\begin{table}[htbp]
+  \centering
+  \begin{tabular}{@{}llc@{}}
+    \toprule
+    \textbf{Entry} & \textbf{Value} & \textbf{Basis} \\
+    \midrule
+    \multicolumn{3}{@{}l}{\textit{Fermentation phases, over a 24 hour batch}} \\
+    \quad Lag            & 0 to 11 h, cold tolerance $\times 0.5$  & sourced \\
+    \quad Active growth  & 11 to 21 h, $\times 1.75$               & sourced \\
+    \quad Maturation     & 21 to 24 h, $\times 1.15$               & sourced \\
+    \midrule
+    \multicolumn{3}{@{}l}{\textit{Culture temperature bounds}} \\
+    \quad Optimal range  & 30 to 37 \si{\celsius}, best near 34.5  & sourced \\
+    \quad Growth limits  & 22 to 41 \si{\celsius}                  & sourced \\
+    \quad Damage ceiling & 42 \si{\celsius}                        & sourced \\
+    \midrule
+    \multicolumn{3}{@{}l}{\textit{Safe air band, by phase}} \\
+    \quad Lag            & 27 to 35 \si{\celsius}                  & estimated \\
+    \quad Active growth  & 23 to 39 \si{\celsius}                  & estimated \\
+    \quad Maturation     & 25 to 37 \si{\celsius}                  & estimated \\
+    \midrule
+    \multicolumn{3}{@{}l}{\textit{Time a batch may spend below its band}} \\
+    \quad Still safe     & 600 s                                   & estimated \\
+    \quad Recoverable    & 900 s                                   & estimated \\
+    \midrule
+    \multicolumn{3}{@{}l}{\textit{Heater limits}} \\
+    \quad Element ceiling      & 60 \si{\celsius}                  & estimated \\
+    \quad Longest run, then rest & 1800 s, then 300 s              & estimated \\
+    \quad Share of any hour on & 0.75                              & estimated \\
+    \bottomrule
+  \end{tabular}
+  \caption{Domain knowledge overview.}
+  \label{tab:domain}
+\end{table}
+
+
+
+\subsection{Tool helpers}
+\label{sec:helpers}
+
+Two small modules stand between the sources and the simulation. Neither decides anything. They
+make the sources available in a form the simulation can use.
+
+\textbf{Reading the state.} The first opens the state document and validates it. It is the only
+place that document is read, so a state that is malformed, incomplete or internally inconsistent
+fails here with a clear message rather than reaching a simulation and producing a plausible
+wrong answer.
+
+\textbf{Reading the domain knowledge.} The second loads the thresholds in \Cref{tab:domain} and
+answers two questions: which phase of fermentation the batch has reached, derived from how long
+it has been running since an incubator has no sensor for it, and which temperature band counts
+as safe in that phase. Both are needed before a trajectory means anything, which is why they are
+settled here rather than downstream.
+
+\subsection{The simulation tool}
+\label{sec:simulation}
+
+The simulation is the capability the language layer uses to answer a what-if question about the
+lid: given an opening, it predicts what the box will do, starting from the state it is in now.
+
+\textbf{Inputs.} The language layer supplies only the scenario: how long the lid stays open and
+when it opens, by default immediately. Everything else is read from the current state, including
+the starting temperatures, the room temperature, the controller settings, the calibrated
+parameters and the open-lid disturbance. The language layer can therefore choose which scenario
+to simulate, but not the conditions it starts from. An opening of zero length gives the undisturbed baseline,
+so the same tool also answers what happens if the lid stays shut. A negative duration, an opening
+longer than six hours or a state that fails validation is refused with a plain message, and
+nothing is replaced by a default.
+
+\textbf{What it does.} It runs the twin's own plant and controller together in closed loop
+\cite{gomes2025incubator}, so the heater reacts to the opening as it would on the box. An open
+lid is represented by multiplying the box's heat-loss coefficient, for as long as the lid is
+open, by a ratio taken from the twin's more detailed calibration. The twin declares that
+coefficient as an input rather than a fixed parameter, so supplying a value that changes over
+time is ordinary use of its interface, and none of its equations, parameters or code is changed.
+The run continues for an hour after the lid closes, long enough to observe recovery.
+
+\textbf{What it returns.} A result has three parts. The summary holds the numbers an answer is
+built from: the lowest air temperature and when it occurs, the total drop, the peak heater
+temperature, the time to recover, and the time spent outside the safe band. The trajectory is
+thinned to about a hundred points, which is the reduction step described in
+\Cref{sec:background}; every number is still computed on the full solver grid. The inputs record
+lists what was actually used, including the fermentation phase and the safe band that applied.
+The tool computes and does not interpret: whether any of this is acceptable for the batch is
+decided by the risk assessment (\Cref{sec:analysis}).
+
+\textbf{Why this suits the language layer.} Three properties make the tool usable by a model
+that must not compute on its own:
+
+\begin{itemize}
+  \item \textbf{It is phrased in the operator's terms.} A duration and a start time are all a call
+    needs, so turning a question into a call requires no knowledge of thermal parameters. This
+    removes the first obstacle in \Cref{sec:gap}.
+  \item \textbf{Every number carries its assumptions.} Because the inputs record is part of the
+    result, an explanation can state what a prediction rests on, such as the phase the batch was
+    judged to be in, without the model reconstructing it.
+  \item \textbf{It follows the twin.} Parameters and controller settings arrive with the state, so
+    after the twin recalibrates or re-tunes its controller (\Cref{sec:incubator-dt}), the next
+    prediction uses the new values with nothing here changed. And because a scenario is only a
+    duration and a start time, a question can be explored by comparison, such as opening now
+    against opening later, the same pattern of repeated calls the heater-boost advisory builds
+    on (\Cref{sec:architecture}).
+\end{itemize}
+
+\newpage
+\subsection{The risk assessment}
+\label{sec:analysis}
+
+The risk assessment turns the simulation's numbers into a verdict about the batch, using rules in
+ordinary code so that the thresholds behind a verdict are stated rather than inferred. From the
+batch's elapsed time it takes the phase, and from \Cref{tab:domain} that phase's safe air band,
+its cold tolerance, and the two exposure budgets that the tolerance scales, so a young batch is
+treated as less forgiving than one generating its own heat.
+
+Time below the band within the first budget is safe, between the two budgets recoverable, and
+beyond the second high risk; time above the band but under the damage ceiling of
+42 \si{\celsius} turns an otherwise safe verdict into recoverable. Air above the ceiling, which
+an open lid cannot cause but the heater boost could, and a run that never returns to the
+setpoint are both high risk, the second because recovery cannot be confirmed, not because harm
+was shown.
+
+A recoverable verdict, the only one where what the operator does next changes the outcome, comes
+with the time the lid must then stay shut. Every verdict carries the number that decided it and
+the limits it inherits from the models and thresholds behind it (\Cref{sec:sources}).
+
+For example, a five-minute opening in active growth, with the air at 30.98 \si{\celsius} and
+the room at 22.4 \si{\celsius}, is predicted to take the air down to 23.81 \si{\celsius}. That
+stays inside the band, so the verdict is safe, but with a margin of only 0.8 \si{\celsius}, on a
+temperature the tempeh itself never reaches.
+
+
+\subsection{The lid-opening advisory}
+\label{sec:skill}
+
+The language layer of \Cref{fig:architecture} holds one advisory, and it is written as
+instructions rather than as code: a short document, a \emph{skill} in the terms of the assistant
+that runs it, loaded when a question is about opening the lid. It names the single tool the
+advisory may call and fixes the order in which the work is done, so no orchestration program of
+our own sits between the operator and the tool. The assistant used here is Claude Code.
+
+What the document fixes is how far the model's discretion reaches. The model may recognise that
+a question concerns the lid, read the opening as a duration, and choose the words; it may not
+fill in what the operator left out, and a question the tool will not accept returns to the
+operator instead of being completed by the model. The rest is relayed: every number in an answer
+must appear in the tool's output, and the caveats may be selected from but never softened. The
+order is fixed as well, with the standing of the thresholds (\Cref{sec:sources}) placed before
+the verdict rather than after it, so the operator cannot take a conclusion without what it rests
+on.
+
+\newpage
+\printbibliography
+
+\end{document}

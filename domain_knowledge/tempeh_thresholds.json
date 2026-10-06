@@ -1,0 +1,78 @@
+{
+  "schema_version": "0.1.0",
+  "_comment": "Tempeh fermentation and heater limits used by the advisory tools. These are properties of the culture and of the heating element, not of the incubator's thermal model, and they are not available from the digital twin itself. Every block carries a status: 'sourced' means the value is taken from the literature cited in README.md, 'estimated' means it is a reasoned figure adopted for this system and has not been measured. A verdict is only as well founded as the thresholds behind it, so the status is part of the data.",
+  "fermentation_phases": {
+    "status": "sourced",
+    "total_duration_hours": 24,
+    "phases": [
+      {
+        "id": "lag",
+        "label": "Lag / warm-up",
+        "elapsed_hours": [
+          0,
+          11
+        ],
+        "temperature_sensitivity": "high",
+        "cold_exposure_multiplier": 0.5
+      },
+      {
+        "id": "active_growth",
+        "label": "Active growth (self-heating)",
+        "elapsed_hours": [
+          11,
+          21
+        ],
+        "temperature_sensitivity": "low",
+        "cold_exposure_multiplier": 1.75
+      },
+      {
+        "id": "maturation",
+        "label": "Maturation / almost ready",
+        "elapsed_hours": [
+          21,
+          24
+        ],
+        "temperature_sensitivity": "medium",
+        "cold_exposure_multiplier": 1.15
+      }
+    ]
+  },
+  "temperature_bounds_c": {
+    "status": "sourced",
+    "optimal_range": [
+      30,
+      37
+    ],
+    "optimal_peak": 34.5,
+    "growth_floor": 22,
+    "growth_ceiling": 41,
+    "damage_ceiling": 42
+  },
+  "safe_band_c_by_phase": {
+    "status": "estimated",
+    "lag": [
+      27,
+      35
+    ],
+    "active_growth": [
+      23,
+      39
+    ],
+    "maturation": [
+      25,
+      37
+    ]
+  },
+  "cold_exposure_budgets_s": {
+    "status": "estimated",
+    "safe_s": 600,
+    "recoverable_s": 900
+  },
+  "heater_safety": {
+    "status": "estimated",
+    "max_t_heater_c": 60,
+    "max_continuous_on_s": 1800,
+    "min_off_after_max_on_s": 300,
+    "max_duty_fraction_over_1h": 0.75
+  }
+}

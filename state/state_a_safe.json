@@ -1,0 +1,57 @@
+{
+  "schema_version": "0.3.0",
+  "description": "Current state of the incubator, as published by the digital twin: the latest sensor readings, actuator settings, filtered state estimate, controller settings, calibrated model parameters, and the batch's progress through fermentation.",
+  "timestamp": "2026-08-29T12:00:00Z",
+  "sensors": {
+    "t_air_c": 31.0,
+    "t_heater_c": 33.4,
+    "t_room_c": 22.4
+  },
+  "actuators": {
+    "heater_on": false,
+    "fan_on": true
+  },
+  "state_estimate": {
+    "source": "kalman_filter",
+    "t_air_c": 30.98,
+    "t_heater_c": 33.37,
+    "covariance_trace": null
+  },
+  "controller": {
+    "type": "on_off",
+    "comment": "lower_bound_c is an offset below temperature_desired_c, not an absolute temperature: heating starts when the air falls to temperature_desired_c - lower_bound_c. There is no upper bound setting; the controller stops heating on a timer, not on a temperature.",
+    "temperature_desired_c": 31.0,
+    "lower_bound_c": 2.0,
+    "heating_time_s": 60000.0,
+    "heating_gap_s": 5.0,
+    "controller_step_size_s": 3.0,
+    "mode": "normal"
+  },
+  "model_parameters": {
+    "source": "Four-parameter calibration of this incubator, fitted with the box empty and the lid closed. A loaded box has more thermal mass than C_air represents.",
+    "comment": "Real calibrated four-parameter values from the vendored DT, copied verbatim. P_heater = V_heater * I_heater = 18.665 W.",
+    "calibrated_at": null,
+    "C_air": 267.55929458,
+    "G_box": 0.5763498,
+    "C_heater": 329.25376821,
+    "G_heater": 1.67053237,
+    "V_heater": 12.15579391,
+    "I_heater": 1.53551347
+  },
+  "lid_disturbance": {
+    "source": "Seven-parameter calibration of this incubator (the physically valid parameter set; the set distributed by default has a negative heater capacitance and must not be used).",
+    "comment": "While the lid is open the box's heat loss coefficient rises from G_box to G_open_lid: power_out_box = ((1 - lid_open) * G_box + lid_open * G_open_lid) * (T - T_room). G_open_lid was calibrated alongside a different G_box (0.694) and a different heater power than model_parameters above, so its absolute value does not transfer. Apply g_open_lid_ratio to the G_box in use instead.",
+    "G_open_lid": 15.010992374623484,
+    "G_box_at_calibration": 0.6942473395576869,
+    "g_open_lid_ratio": 21.62,
+    "validated_against": "Not validated against a recorded opening. The one comparison made against real data measured an open-lid time constant of about 50.6 s, against the 21.5 s this ratio implies, so an open lid is modelled as cooling the box faster than it does. Predictions made with it are therefore conservative."
+  },
+  "fermentation": {
+    "batch_id": "tempeh-001",
+    "started_at": "2026-08-28T18:00:00Z",
+    "elapsed_hours": 18.0,
+    "target_temp_c": 31.0,
+    "notes": "The batch's phase is not sensed. It is derived from elapsed_hours against the taxonomy in domain_knowledge/tempeh_thresholds.json, together with the safe temperature band that applies to it. The boundary between the lag and active-growth phases reflects a 22 hour run in which self-heating became strong enough after about 11.3 hours that the setpoint was lowered and the heater stayed off for the rest of the batch."
+  },
+  "anomalies": []
+}
