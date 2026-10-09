@@ -21,6 +21,14 @@ Open Claude Code in this folder and ask, for example:
 
 The `lid-opening` skill runs the simulation and risk assessment and explains the result.
 
+If the answer comes back high risk, ask whether warming the box first would rescue it:
+
+> Can you find me a heater boost so I can still open it for 5 minutes?
+
+The `heater-boost` skill searches for the lowest setpoint that makes the opening acceptable and
+returns it as a plan — what to set, how long to wait, and how long to keep the lid shut
+afterwards — or reports that no boost is enough.
+
 The advisory reads `state/current_state.json`. Four example states are included; copy one over
 it to switch. Asked about a 5 minute opening:
 

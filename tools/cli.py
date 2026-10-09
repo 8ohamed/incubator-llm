@@ -1,16 +1,13 @@
 """Command-line entry point: simulate a lid opening, then assess its risk to the batch.
 
-This is the one command the lid-opening skill runs. It decides nothing itself: it calls
-`simulate_lid_opening` and `assess_lid_opening` and prints their combined result as one JSON
-object on stdout. Putting that result into words is the skill's job.
+The one command the lid-opening skill runs. It decides nothing: it calls `simulate_lid_opening`
+and `assess_lid_opening` and prints the combined result as one JSON object. Putting that into
+words is the skill's job. From this folder, with the virtual environment active::
 
-Usage (from this folder, with the virtual environment active)::
+    python -m tools.cli --duration-s 300 [--open-at-s 600]
 
-    python -m tools.cli --duration-s 300
-    python -m tools.cli --duration-s 300 --open-at-s 600
-
-On a bad argument or an out-of-range request it prints ``{"error": "..."}`` and exits 1 rather
-than raising, so the caller gets a message it can relay instead of a traceback.
+A bad or out-of-range argument prints ``{"error": "..."}`` and exits 1 rather than raising, so
+the caller gets something it can relay instead of a traceback.
 """
 
 from __future__ import annotations

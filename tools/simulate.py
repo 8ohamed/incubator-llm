@@ -1,19 +1,16 @@
 """Forward-simulate the incubator, with or without a lid opening.
 
-Answers "what happens to the box if the lid is open for N seconds?" with a trajectory and a set
-of derived figures. It computes; it does not interpret. Turning a trajectory into a judgement
-about the batch is the risk assessment's job.
+"What happens to the box if the lid is open for N seconds?", as a trajectory and derived
+figures. It computes; interpreting the result is the risk assessment's job.
 
-**The model.** The digital twin's four-parameter plant together with its bang-bang controller,
-wired the way the twin wires them. An open lid is represented by driving the plant's ``G_box``
-input to ``g_open_lid_ratio * G_box`` while the lid is open, which is the same disturbance the
-twin's seven-parameter plant applies, kept here on the four-parameter set so that the heater
-power stays consistent. The twin's own code is not modified: ``G_box`` is declared as an input,
-so supplying a time-varying value is ordinary use of it.
+**The model** is the twin's four-parameter plant and bang-bang controller, wired as the twin
+wires them. An open lid drives the plant's ``G_box`` input to ``g_open_lid_ratio * G_box`` --
+the same disturbance the twin's seven-parameter plant applies, kept on the four-parameter set so
+the heater power stays consistent. The twin's code is not modified: ``G_box`` is declared an
+input, so a time-varying value is ordinary use of it.
 
-**What the temperature means.** ``t_air_c`` is the air temperature inside the box, the quantity
-the incubator's sensors and controller see. The plant has no term for the batch's thermal mass
-or for any heat the culture produces, so a batch does not follow this curve.
+**``t_air_c`` is the air**, what the sensors and controller see. The plant has no term for the
+batch's thermal mass or the culture's own heat, so a batch does not follow this curve.
 """
 
 from __future__ import annotations
@@ -51,9 +48,9 @@ class SimulationError(ValueError):
 class _LidAwareSystem(Model):
     """Four-parameter plant + bang-bang controller, with a square lid-open pulse.
 
-    Mirrors `SystemModel4Parameters`, adding one thing: ``G_box`` is switched to
-    ``g_open_lid_ratio * G_box`` for ``[open_at_s, close_at_s)``. A zero-length pulse gives
-    the undisturbed baseline.
+    Mirrors `SystemModel4Parameters`, adding one thing: ``G_box`` switches to
+    ``g_open_lid_ratio * G_box`` over ``[open_at_s, close_at_s)``. A zero-length pulse is the
+    undisturbed baseline.
     """
 
     def __init__(self, *, C_air, G_box, C_heater, G_heater, V_heater, I_heater,
@@ -96,31 +93,23 @@ def simulate_lid_opening(duration_s: float,
 
     Args:
         duration_s: how long the lid stays open, in seconds. 0 gives the undisturbed baseline.
-        open_at_s: when the lid opens, in seconds from now. 0 means "right now".
-        horizon_s: total simulated time. Defaults to
-            ``open_at_s + duration_s + recovery_budget_s``, i.e. enough time to watch the
-            box recover after the lid is closed.
-        recovery_budget_s: how long after the lid closes to keep simulating, when
-            ``horizon_s`` is not given.
+        open_at_s: when the lid opens, in seconds from now.
+        horizon_s: total simulated time. Defaults to ``close_at_s + recovery_budget_s``.
+        recovery_budget_s: how long after the lid closes to keep simulating, when ``horizon_s``
+            is not given.
         state: a state dict from `tools.state.get_current_state`. Read from disk if omitted.
-        initial_from: ``"state_estimate"`` (the DT's Kalman output, the default) or
-            ``"sensors"`` (the raw readings) for the initial temperatures.
-        trajectory_points: how many samples the returned ``trajectory`` is thinned to.
-            ``None`` returns every solver sample, which is the grid the summary figures were
-            computed on -- what to ask for when the curve is to be inspected against them.
+        initial_from: ``"state_estimate"`` (the twin's Kalman output, the default) or
+            ``"sensors"`` for the initial temperatures.
+        trajectory_points: how many samples ``trajectory`` is thinned to. ``None`` returns every
+            solver sample, which is the grid the summary figures were computed on.
 
     Returns:
-        A JSON-serialisable dict with:
+        A JSON-serialisable dict with ``summary`` (the figures an answer is built from),
+        ``trajectory`` (``t_s``, ``t_air_c``, ``t_heater_c``, ``heater_on``, ``lid_open``) and
+        ``inputs`` (the arguments and initial conditions actually used).
 
-        - ``summary``: the numbers an answer is built from -- minimum air temperature and
-          when it occurs, temperature at the moment the lid closes, total drop, peak heater
-          temperature, recovery times after closing, heater duty.
-        - ``trajectory``: down-sampled series (``t_s``, ``t_air_c``, ``t_heater_c``,
-          ``heater_on``, ``lid_open``) for context or plotting.
-        - ``inputs``: the arguments and initial conditions actually used.
-
-        ``recovery_*`` entries are ``None`` when recovery did not happen inside the horizon;
-        that is a real answer ("not within N minutes"), not a failure.
+        ``recovery_*`` is ``None`` when recovery did not happen inside the horizon. That is a
+        real answer -- "not within N minutes" -- not a failure.
     """
     state = get_current_state() if state is None else state
 
@@ -195,10 +184,9 @@ def simulate_baseline(horizon_s: float,
                       state: dict | None = None,
                       initial_from: str = "state_estimate",
                       trajectory_points: int | None = TARGET_TRAJECTORY_POINTS) -> dict:
-    """Simulate the incubator with the lid kept shut -- the "do nothing" comparison.
+    """The lid kept shut: the "do nothing" comparison.
 
-    Same return shape as `simulate_lid_opening`; it *is* that function with a zero-length
-    opening, so the two curves are directly comparable.
+    `simulate_lid_opening` with a zero-length opening, so the two curves are directly comparable.
     """
     return simulate_lid_opening(duration_s=0.0, open_at_s=0.0, horizon_s=horizon_s,
                                 state=state, initial_from=initial_from,
@@ -329,10 +317,8 @@ def _relative(absolute_s: float | None, origin_s: float) -> float | None:
 def _downsample(fine: dict, target: int | None = TARGET_TRAJECTORY_POINTS) -> dict:
     """Thin the solver grid to about `target` samples for reporting.
 
-    Every sample is a real solver sample -- this selects, it does not interpolate, so no
-    value in the trajectory is invented. The summary metrics are computed on the full grid,
-    so `target=None`, which keeps every sample, is what makes the trajectory and the summary
-    describe exactly the same curve.
+    Selects real samples; never interpolates, so no value in the trajectory is invented. The
+    summary is computed on the full grid, so `target=None` is what makes the two match exactly.
     """
     n = fine["t_s"].size
     if target is None:

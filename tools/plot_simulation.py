@@ -1,43 +1,26 @@
 """Draw what ``tools/simulate.py`` predicts, and nothing else.
 
-The advisory answers in numbers. This module shows the curve those numbers describe: the
-predicted air temperature, the heating element behind it, and when the lid and the heater are
-open and on. It plots one thing -- a simulation result -- and leaves every judgement about it
-to the reader.
+The advisory answers in numbers; this shows the curve behind them -- predicted air temperature,
+the heating element, and when the lid and heater are open and on.
 
-**No risk assessment appears here.** The verdict, the exposure budgets it is weighed against,
-the phase tolerance and the advice that follows all live in ``tools/analyze.py``, and this
-module neither imports it nor repeats any of its output. That is the point: a picture that
-already announces the answer is no way to check the answer. Run ``python -m tools.cli`` for the
-verdict and read it against this plot, which was drawn without it.
+**No risk assessment appears here.** The verdict lives in ``tools/analyze.py``, which this
+module neither imports nor repeats: a picture that already announces the answer is no way to
+check the answer. Run ``python -m tools.cli`` for the verdict and read it against a plot drawn
+without it. The safe band and phase shown *are* simulation output, returned by
+``simulate_lid_opening`` in its own ``inputs`` and ``summary``, not a judgement about the batch.
 
-What is drawn comes from the simulation alone. The safe band and the fermentation phase are
-shown because ``simulate_lid_opening`` returns them in its own ``inputs`` and measures time
-outside the band in its own ``summary``; they are simulation output, not a judgement about the
-batch. Nothing here says whether any of it is acceptable.
+**The curve shown is the curve measured:** the trajectory is requested at full solver
+resolution, the grid the summary figures were computed on, so the lowest point drawn is exactly
+``min_t_air_c``. A disagreement between picture and number is real, not an artefact of thinning.
 
-**The curve shown is the curve measured.** The trajectory is requested at full solver
-resolution, which is the grid the summary figures were computed on. The lowest point drawn is
-therefore exactly the ``min_t_air_c`` in the summary, and the shaded region starts and ends
-where the counting did; a disagreement between picture and number is a real disagreement, not
-an artefact of thinning the curve for display.
-
-**What the temperature is.** ``t_air_c`` is the air in the box. The plant has no term for the
-cake's thermal mass or for the culture's own heat, so a batch does not follow this curve: it
-cools more slowly and does not reach the minimum drawn. The figure repeats this under the
-plot, because it is the first thing to hold in mind while reading one.
+``t_air_c`` is the air; a batch cools more slowly and never reaches the minimum drawn. The
+figure repeats this under the plot.
 
 Usage (from this folder, with the virtual environment active)::
 
     python -m tools.plot_simulation 5                 # a 5 minute opening, in a window
     python -m tools.plot_simulation 5 --out plot.png  # and save it
-    python -m tools.plot_simulation 5 --no-show --out plot.png
     python -m tools.plot_simulation 0                 # the lid-shut baseline
-
-Or from Python::
-
-    from tools.plot_simulation import plot_simulation
-    plot_simulation(5)
 """
 
 from __future__ import annotations
@@ -105,8 +88,8 @@ def plot_simulation(minutes: float,
                     full_horizon: bool = False) -> dict:
     """Simulate a lid opening and plot the result.
 
-    No risk assessment is run, and none is drawn. This returns and shows what the simulation
-    predicted; what it means for the batch is `tools.analyze`'s question, asked separately.
+    No risk assessment is run and none is drawn: what the curve means for the batch is
+    `tools.analyze`'s question, asked separately.
 
     Args:
         minutes: how long the lid stays open, in minutes. 0 plots the lid-shut baseline.
@@ -116,14 +99,14 @@ def plot_simulation(minutes: float,
         out_path: save the figure here. Omit to only show it.
         show: open the figure in a window. Turn off when only the file is wanted.
         dark: use the dark colour set, for a dark viewer or slide.
-        full_horizon: draw the whole simulated hour. Off by default, because the opening and
-            its recovery occupy the first few minutes of it and the rest is the controller
-            cycling; the simulation is unchanged either way, only how much of it is shown.
+        full_horizon: draw the whole simulated hour. Off by default: the opening and its
+            recovery occupy the first few minutes and the rest is the controller cycling. This
+            changes only how much is shown, never the simulation.
 
     Returns:
-        ``{"simulation": ..., "figure_path": ...}`` -- the dict
+        ``{"simulation": ..., "figure_path": ...}`` -- what
         `tools.simulate.simulate_lid_opening` returned, so the numbers behind the picture are
-        available to the caller, plus where the figure was written (``None`` if not saved).
+        to hand, plus where the figure was written (``None`` if not saved).
     """
     duration_s = _minutes_to_seconds(minutes, "minutes")
     open_at_s = _minutes_to_seconds(open_after_minutes, "open_after_minutes")
@@ -151,8 +134,8 @@ def _minutes_to_seconds(value, name: str) -> float:
 def _import_pyplot(show: bool):
     """Import pyplot, choosing a file-only backend when no window is wanted.
 
-    Selecting the backend before the first import matters: with no display available the
-    interactive backends fail, and a saved figure does not need one.
+    The backend must be selected before the first import: with no display, the interactive
+    backends fail, and a saved figure does not need one.
     """
     try:
         import matplotlib

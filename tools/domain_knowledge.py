@@ -1,15 +1,12 @@
 """Tempeh fermentation and heater limits the digital twin does not carry.
 
-The twin models the air in the box and the heater element. It knows nothing about the culture
-inside: which phase of fermentation a batch is in, how cold it may get before that matters, or
-how long it may stay there. Those figures live in ``domain_knowledge/tempeh_thresholds.json``
-and are read here.
+The twin models air and heating element; it knows nothing about the culture inside. Those
+figures live in ``domain_knowledge/tempeh_thresholds.json``, each marked ``"sourced"`` or
+``"estimated"``, and are read here. This module looks up; what a trajectory *means* for a batch
+is the risk assessment's call.
 
-Every value is marked ``"sourced"`` or ``"estimated"`` in that file. This module reads and looks
-up; deciding what a particular trajectory means for a batch belongs to the risk assessment.
-
-The fermentation phase is derived rather than read. An incubator has no sensor for it, so it is
-computed from how long the batch has been running.
+The fermentation phase is derived, not read: an incubator has no sensor for it, so it comes from
+how long the batch has been running.
 """
 
 from __future__ import annotations
@@ -36,9 +33,8 @@ def load_thresholds(path: str | Path | None = None) -> dict:
 def phase_for_elapsed_hours(elapsed_hours: float, path: str | Path | None = None) -> str:
     """Which fermentation phase a batch is in, from how long it has been running.
 
-    Phases are contiguous and sorted by `elapsed_hours` in the JSON. A batch that has run
-    longer than the taxonomy's `total_duration_hours` falls back to the last phase
-    (maturation) -- a slow batch, not an error.
+    A batch past the taxonomy's `total_duration_hours` falls back to the last phase: a slow
+    batch, not an error.
     """
     phases = load_thresholds(path)["fermentation_phases"]["phases"]
     for p in phases:
@@ -77,11 +73,11 @@ def heat_damage_ceiling_c(path: str | Path | None = None) -> float:
 
 
 def heater_safety(path: str | Path | None = None) -> dict:
-    """Heater safety figures: the temperature ceiling and the three duty limits.
+    """``max_t_heater_c``, ``max_continuous_on_s``, ``min_off_after_max_on_s``,
+    ``max_duty_fraction_over_1h``.
 
-    Keys: ``max_t_heater_c``, ``max_continuous_on_s``, ``min_off_after_max_on_s``,
-    ``max_duty_fraction_over_1h``. All estimated. The duty limits bound what the heater may be
-    asked to do; they are adopted figures, not measured hardware limits.
+    All estimated: adopted figures bounding what the heater may be asked to do, not measured
+    hardware limits.
     """
     return dict(load_thresholds(path)["heater_safety"])
 

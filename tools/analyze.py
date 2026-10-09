@@ -1,25 +1,15 @@
 """Turn a simulated lid opening into a risk verdict for the tempeh batch.
 
-``tools/simulate.py`` says what the *air temperature* does. This module says what that means
-for the *culture*: is the opening safe, is it survivable provided the lid then stays shut for a
-while, or does it put the batch at real risk?
+``simulate.py`` says what the air temperature does; this says what that means for the culture.
+Everything here is a rule applied to numbers the simulation already computed -- it never
+re-derives a temperature, and the answer given to the operator relays the verdict rather than
+deciding it.
 
-The split is deliberate. Everything here is a rule applied to numbers the simulation already
-computed; this module never re-derives a temperature. The answer given to the operator puts the
-verdict and its reasons into plain language, and does not decide the verdict.
-
-**Where the thresholds come from.** The fermentation phase, the safe temperature band, the
-cold-exposure budgets and the hot-side damage ceiling all come from
-``tools/domain_knowledge.py``, which reads ``domain_knowledge/tempeh_thresholds.json``: tempeh
-fermentation science, cited, and cross-checked against one real batch. That is not calibration.
-No batch that actually spoiled was available, so these thresholds can be informed by the
-literature and cross-checked against a healthy batch, never validated against a real failure.
-``thresholds_are_provisional`` stays ``True`` for exactly that reason, and every verdict returns
-the thresholds it used, so the claim can be checked.
-
-**Caveats travel with the verdict.** A verdict is only as good as the model behind it, and the
-model describes air rather than tempeh. Every result therefore carries the caveats that bear on
-it. The answer given to the operator says that it has limitations and explains them on request.
+Phase, safe band, cold-exposure budgets and the damage ceiling all come from
+``domain_knowledge.py``. They are informed by tempeh literature and cross-checked against one
+healthy batch, but no batch that actually spoiled was available, so they are never validated
+against a real failure: ``thresholds_are_provisional`` stays ``True``, and every verdict returns
+the thresholds and caveats it rests on so the claim can be checked.
 """
 
 from __future__ import annotations
@@ -64,11 +54,11 @@ def assess_lid_opening(simulation: dict, state: dict | None = None) -> dict:
 
         - ``verdict``: ``"safe"``, ``"recoverable"`` or ``"high_risk"``, plus ``option``
           (``"A"``/``"B"``/``"C"``).
-        - ``keep_closed_s``: for a ``recoverable`` verdict, how long the lid must then stay shut
-          for the box to be back at the setpoint. ``None`` if recovery never happened.
-        - ``reasons``: short factual strings, each carrying the number that justifies it.
-        - ``caveats``: the limits of the model this verdict rests on, explained to the operator
-          on request; the drop predicted here is for air, not for the cake.
+        - ``keep_closed_s``: for ``recoverable`` only, how long the lid must then stay shut for
+          the box to be back at the setpoint. ``None`` otherwise, or if recovery never happened.
+        - ``reasons``: factual strings, each carrying the number that justifies it.
+        - ``caveats``: the model limits this verdict rests on -- above all, that the drop is
+          air, not the cake.
         - ``metrics`` / ``thresholds``: what the verdict was computed from.
     """
     state = get_current_state() if state is None else state
