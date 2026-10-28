@@ -13,9 +13,11 @@
 \usepackage{graphicx}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{float}
 \usepackage{siunitx}
 \usepackage{enumitem}
 \usepackage{xcolor}
+\newcommand{\tbd}[1]{\textcolor{red}{[#1]}} % placeholder for a value or decision not yet in
 \usepackage{listings}
 \lstset{
   language=Python,
@@ -84,14 +86,8 @@ external code and continue with the returned value \cite{schick2023toolformer}, 
 responsibility from knowing a quantity to knowing which computation produces it.
 
 The two are complementary: a DT holds a calibrated model of a process, while an LLM is easy to
-address but has no reliable account of how any particular process behaves. Kleiman et al. build
-a framework on this pairing, placing an agent between the user and an existing simulation
-\cite{kleiman2025simulationagent}. Such a layer adds \emph{access}, turning the user's question
-into a correctly configured run, and \emph{interpretation}, turning the result into an
-explanation the user can act on, without the model needing to know the process itself. Two of
-the framework's design choices carry over \cite{kleiman2025simulationagent}: the simulation is
-called but never modified, and its raw output is reduced to compact summaries before the model
-sees it, because a full time series exceeds what a model can usefully consume.
+address but has no reliable account of how any particular process behaves. \Cref{sec:related}
+reviews the work that builds on this pairing.
 
 
 \subsection{The incubator digital twin}
@@ -158,7 +154,92 @@ below has computed it.
 
 \begin{figure}[!ht]
   \centering
-  \includegraphics[width=\textwidth]{llm_layer_arch.png}
+  \setstretch{1}
+  \definecolor{archteal}{HTML}{1F7A73}
+  \definecolor{archblue}{HTML}{2F6DB5}
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[
+      box/.style={draw=black!70, fill=white, rounded corners=2pt, align=center,
+                  font=\small, minimum height=1.2cm, inner sep=3pt},
+      src/.style={box, minimum height=1.6cm},
+      flow/.style={-{Stealth[length=2.2mm]}, semithick, draw=archteal},
+      bflow/.style={flow, draw=archblue, dashed},
+      lab/.style={font=\scriptsize, text=archteal, align=center},
+      blab/.style={font=\scriptsize, text=archblue, align=center},
+      band/.style={fill=black!5, draw=black!15, rounded corners=3pt},
+      bandname/.style={rotate=90, font=\footnotesize\scshape, text=black!65},
+      note/.style={font=\scriptsize\itshape, text=black!55, align=center}]
+
+    % Bands
+    \draw[band] (-0.9,8.6) rectangle (15.1,11.0);
+    \draw[band] (-0.9,3.2) rectangle (15.1,7.0);
+    \draw[band] (-0.9,0.0) rectangle (15.1,2.6);
+    \node[bandname] at (-0.5,9.8) {Language layer};
+    \node[bandname] at (-0.5,5.1) {Tool layer};
+    \node[bandname] at (-0.5,1.3) {Sources};
+    \node[note] at (7.75,9.4) {interprets and explains,\\computes nothing};
+    \node[note] at (6.5,6.6) {computes every number\\in an answer};
+
+    % Nodes
+    \node[box, minimum width=3cm, rounded corners=8pt, font=\normalsize] (op) at (7.75,12.4) {Operator};
+    \node[box, minimum width=3.4cm] (lid) at (3.5,9.4)  {Lid-opening\\advisory};
+    \node[box, minimum width=3.4cm] (hb)  at (12.0,9.4) {Heater-boost\\advisory};
+    \node[box, minimum width=2.3cm] (st)   at (1.4,4.6)  {State\\access};
+    \node[box, minimum width=2.3cm] (sim)  at (5.2,4.6)  {Simulation};
+    \node[box, minimum width=2.3cm] (risk) at (9.0,4.6)  {Risk\\assessment};
+    \node[box, minimum width=2.6cm] (bo)   at (13.0,4.6) {Boost\\optimisation};
+    \node[src, minimum width=3.2cm] (dts) at (1.7,1.3)  {Digital twin state\\{\scriptsize\itshape as published}};
+    \node[src, minimum width=3.8cm] (dtm) at (6.4,1.3)  {Digital twin models\\and controllers\\{\scriptsize\itshape used unmodified}};
+    \node[src, minimum width=5.0cm] (dk)  at (12.3,1.3) {Domain knowledge\\{\scriptsize\itshape sourced or estimated}\\{\scriptsize phases, bands, budgets, heater limits}};
+
+    % Attachment points
+    \coordinate (hbL)   at ([xshift=-2mm]hb.south);
+    \coordinate (hbR)   at ([xshift=8mm]hb.south);
+    \coordinate (simM)  at ([xshift=-5mm]sim.south);
+    \coordinate (simD)  at ([xshift=4mm]sim.south);
+    \coordinate (simC)  at ([xshift=9mm]sim.south);
+    \coordinate (riskL) at ([xshift=-5mm]risk.south);
+    \coordinate (riskD) at ([xshift=10mm]risk.south);
+    \coordinate (boL)   at ([xshift=-4mm]bo.south);
+    \coordinate (boD)   at ([xshift=8mm]bo.south);
+    \coordinate (y285)  at (0,2.85);
+    \coordinate (y355)  at (0,3.55);
+
+    % Operator and advisories
+    \draw[flow] ([yshift=2mm]op.west) -| node[lab, pos=0.75, left] {question} ([xshift=-6mm]lid.north);
+    \draw[flow] ([xshift=6mm]lid.north) |- node[lab, pos=0.25, right] {answer} ([yshift=-2mm]op.west);
+    \draw[bflow] ([yshift=2mm]op.east) -| node[blab, pos=0.75, right] {question} ([xshift=6mm]hb.north);
+    \draw[bflow] ([xshift=-6mm]hb.north) |- node[blab, pos=0.25, left] {answer} ([yshift=-2mm]op.east);
+
+    % Lid-opening advisory and the tool pipeline
+    \draw[flow] ([xshift=-3mm]lid.south) -- node[lab, left, pos=0.45] {duration,\\start time} ++(0,-2.6)
+                -| ([xshift=-6mm]sim.north);
+    \draw[flow] ([xshift=-8mm]risk.north) -- ++(0,2.6)
+                -| node[lab, above, pos=0.25] {verdict and prediction} ([xshift=9mm]lid.south);
+    \draw[flow] (st) -- node[lab, above] {conditions} (sim);
+    \draw[flow] (sim) -- node[lab, above] {trajectory} (risk);
+
+    % Heater-boost advisory and its search
+    \draw[bflow] (hbR) -- node[blab, right] {duration} (hbR |- bo.north);
+    \draw[bflow] (hbL |- bo.north) -- node[blab, left, text width=2.7cm, align=right]
+                 {verdict and plan:\\setpoint, wait,\\keep-shut time, margin} (hbL);
+    \draw[bflow] (boL) -- (boL |- y355) -| (simD);
+    \draw[bflow] (riskL |- y355) -- (riskL);
+    \fill[archblue] (riskL |- y355) circle (1.2pt);
+
+    % Sources
+    \draw[flow] (st.south |- dts.north) -- (st.south);
+    \draw[flow] (simM |- dtm.north) -- (simM);
+    \draw[flow] (riskD |- dk.north) -- (riskD);
+    \draw[flow] (riskD |- y285) -| (simC);
+    \fill[archteal] (riskD |- y285) circle (1.2pt);
+    \draw[bflow] (boD |- dk.north) -- (boD);
+
+    % Legend
+    \draw[flow] (-0.9,-0.6) -- ++(0.9,0) node[right, font=\scriptsize, text=black] {every request};
+    \draw[bflow] (3.0,-0.6) -- ++(0.9,0) node[right, font=\scriptsize, text=black]
+                 {heater-boost requests only; each candidate boost is simulated and assessed in turn};
+  \end{tikzpicture}}
   \caption{The advisory layer in three ordered layers.}
   \label{fig:architecture}
 \end{figure}
@@ -170,10 +251,9 @@ arithmetic the layer performs.
 
 The \textbf{tool layer} carries out every calculation, as a pipeline. State access assembles the
 batch's current conditions, the simulation projects them forward under the disturbance asked
-about, and the risk assessment reduces the trajectory to a verdict, the numbers supporting it and
-the margin to the nearest boundary between verdicts. Only that judgement crosses back to the
-language layer, because turning a curve into a decision about the batch must not be left to
-prose. The second advisory, a heater boost, reuses the same pipeline as an optimisation: each
+about, and the risk assessment reduces the trajectory to a verdict and the numbers and thresholds that
+decided it. The verdict crosses back to the language layer together with the prediction, because
+turning a curve into a decision about the batch must not be left to prose. The second advisory, a heater boost, reuses the same pipeline as an optimisation: each
 candidate pre-heating strategy is scored by re-running the simulation and the risk assessment.
 
 The \textbf{sources} differ in where their authority comes from. The live DT state makes an
@@ -181,10 +261,104 @@ answer concern this batch rather than batches in general. The DT's own models an
 are driven from outside and never altered, so numerical authority stays with the DT
 \cite{gomes2025incubator}. Domain knowledge supplies the fermentation thresholds.
 
+\subsection{Research question}
+\label{sec:rq}
 
+This project takes up the third point of the gap (\Cref{sec:gap}). The twin's tools answer
+forward questions: given an opening of a set length, what happens to the batch. The questions an
+operator asks next are often inverse ones, such as how long the lid can stay open or when to open
+it. No tool answers these directly, but a search over the
+forward tools can. The heater-boost advisory deliberately leaves such a search out of the
+language layer (\Cref{sec:boost}), and the research question asks what happens when the
+operator's question needs one anyway:
+
+\begin{quote}
+  When an operator asks an inverse question (how long or when) that the twin's
+  forward-simulation tools do not answer directly, can a skill-based advisory layer answer it by
+  searching over those tools?
+  \begin{enumerate}[label=(\alph*)]
+    \item How close are its answers to a reference search over the same tools?
+    \item When part or all of an answer does not come from the tools, whether because the search
+      needed a step the tools do not provide or because the question lies outside the twin
+      altogether, does the layer say so?
+  \end{enumerate}
+\end{quote}
+
+Whether the twin's models are accurate bounds every answer but is not asked here, so an answer
+is judged against the twin, not against the real batch.
+
+
+% =====================================================================================
 \newpage
-\section{Implementation}
-\label{sec:implementation}
+\section{Related work}
+\label{sec:related}
+
+Two lines of work bear on the research question: language models placed on top of an existing
+simulation or digital twin, and language models that call tools in sequence, search or plan.
+
+\subsection{Language models over simulations and digital twins}
+\label{sec:related-dt}
+
+Kleiman et al.\ build a framework on the pairing of the two, placing an agent between the user
+and an existing simulation \cite{kleiman2025simulationagent}. Such a layer adds \emph{access},
+turning the user's question into a correctly configured run, and \emph{interpretation}, turning
+the result into an explanation the user can act on, without the model needing to know the
+process itself. Two of the framework's design choices carry over to this project
+\cite{kleiman2025simulationagent}: the simulation is called but never modified, and its raw
+output is reduced to compact summaries before the model sees it, because a full time series
+exceeds what a model can usefully consume.
+
+Later work gives the model more to decide. Ndum et al.\ add a language model to the digital twin
+of an advanced nuclear reactor; it calls the twin's tools and draws on domain knowledge to
+suggest operating steps, while the operator keeps the decision \cite{ndum2026aroma}. Xia et al.\
+let language-model agents run a twin's simulation repeatedly to find parameter settings that
+meet an objective, shown in a case study with systematic evaluation left for later
+\cite{xia2024llmsimulation}. This is the closest precedent for the inverse questions here: the
+model itself searches over a simulation it cannot change.
+
+Mylonas et al.\ go the other way, in an agentic twin for a power-grid control room
+\cite{mylonas2026governance}. The model may only select and configure whitelisted analysis
+tools, and a governance layer outside its control renders every number in an answer from the
+tools' results and holds back any action with side effects until an operator approves it. On
+their benchmark of 118 tasks the rules held in every run; with the layer removed, only 39.2\%
+of answers carried numbers the tools supported. Where an answer's numbers come from is thus
+measured there, but enforced in code. In this project it rests on the skills' instructions,
+which the model can depart from, and that is why part (b) of the research question measures it.
+
+\subsection{Tool use, search and planning}
+\label{sec:related-tools}
+
+Tool use has moved from single calls to sequences. ReAct interleaves reasoning with actions,
+choosing each call from the result of the last \cite{yao2023react}, and program-aided models
+write code for an interpreter so that arithmetic is done there rather than in generated text
+\cite{gao2023pal}. A model can also act as the search itself, proposing new candidates from the
+scores of earlier ones \cite{yang2024opro}. An inverse question needs all three: a sequence of
+calls, numbers kept out of generated text, and a search the model steers.
+
+Whether the model should run that search itself is less settled. On problems from the
+automated-planning community, Valmeekam et al.\ find that language models generate poor plans,
+the strongest models included \cite{valmeekam2023planbench}. Guan et al.\ therefore have the
+model write a formal model of the domain and leave the search to a sound planner, with the model
+translating between the planner and the user \cite{guan2023worldmodels}. The heater-boost
+advisory makes the same split (\Cref{sec:boost}): its search for the lowest boost runs in the
+tool layer, and a shorter opening is suggested but not searched for. An inverse question with no
+tool behind it removes that option, so the model must search, decline or ask.
+
+\subsection{Position of this work}
+\label{sec:related-position}
+
+None of these studies compares a model's own search over a twin's simulation with a systematic
+search over the same tools, and the one that measures where an answer's numbers come from does
+so behind a layer the model cannot bypass. This project measures both for a layer made only of
+skills, which instruct the model but do not constrain it: how close its searched answers come to
+a reference search, and whether it says which parts of an answer the tools did not produce
+(\Cref{sec:rq}).
+
+
+% =====================================================================================
+\newpage
+\section{System}
+\label{sec:system}
 
 \subsection{The sources}
 \label{sec:sources}
@@ -210,7 +384,7 @@ and each can be trusted to a different degree.
 
 \textbf{The digital twin's models.} Four modules are taken from the twin: two plants, one
 carrying the air temperature and the box's heat loss and one adding the heater element, the
-controller's switching logic, and the wrapper that simulates a controller and a plant together
+controller's switching logic, and the wrapper that makes that logic a model the solver can run
 \cite{gomes2025incubator}. They are used exactly as the twin defines them. Their calibrated
 parameters arrive with the current state rather than being written into this code, so a
 recalibration on the twin's side reaches the advisory with nothing here edited.
@@ -295,11 +469,12 @@ settled here rather than downstream.
 The simulation is the capability the language layer uses to answer a what-if question about the
 lid: given an opening, it predicts what the box will do, starting from the state it is in now.
 
-\textbf{Inputs.} The language layer supplies only the scenario: how long the lid stays open and
+\textbf{Inputs.} The language layer supplies only the opening: how long the lid stays open and
 when it opens, by default immediately. Everything else is read from the current state, including
 the starting temperatures, the room temperature, the controller settings, the calibrated
-parameters and the open-lid disturbance. The language layer can therefore choose which scenario
-to simulate, but not the conditions it starts from. An opening of zero length gives the undisturbed baseline,
+parameters and the open-lid disturbance. The skills have the language layer choose which opening
+to simulate, not the conditions it starts from, although the tool can be pointed at another
+state file, a route \Cref{sec:runs} returns to. An opening of zero length gives the undisturbed baseline,
 so the same tool also answers what happens if the lid stays shut. A negative duration, an opening
 longer than six hours or a state that fails validation is refused with a plain message, and
 nothing is replaced by a default.
@@ -316,7 +491,7 @@ The run continues for an hour after the lid closes, long enough to observe recov
 built from: the lowest air temperature and when it occurs, the total drop, the peak heater
 temperature, the time to recover, and the time spent outside the safe band. The trajectory is
 thinned to about a hundred points, which is the reduction step described in
-\Cref{sec:background}; every number is still computed on the full solver grid. The inputs record
+\Cref{sec:related-dt}; every number is still computed on the full solver grid. The inputs record
 lists what was actually used, including the fermentation phase and the safe band that applied.
 The tool computes and does not interpret: whether any of this is acceptable for the batch is
 decided by the risk assessment (\Cref{sec:analysis}).
@@ -333,19 +508,21 @@ that must not compute on its own:
     judged to be in, without the model reconstructing it.
   \item \textbf{It follows the twin.} Parameters and controller settings arrive with the state, so
     after the twin recalibrates or re-tunes its controller (\Cref{sec:incubator-dt}), the next
-    prediction uses the new values with nothing here changed. And because a scenario is only a
+    prediction uses the new values with nothing here changed. And because an opening is only a
     duration and a start time, a question can be explored by comparison, such as opening now
     against opening later, the same pattern of repeated calls the heater-boost advisory builds
     on (\Cref{sec:architecture}).
 \end{itemize}
 
-\newpage
+% These three properties are what the discussion (sec:flexibility) tests.
+
 \subsection{The risk assessment}
 \label{sec:analysis}
 
 The risk assessment turns the simulation's numbers into a verdict about the batch, using rules in
 ordinary code so that the thresholds behind a verdict are stated rather than inferred. From the
-batch's elapsed time it takes the phase, and from \Cref{tab:domain} that phase's safe air band,
+batch's age when the lid opens it takes the phase, so a later opening is judged in the phase it
+falls in, and from \Cref{tab:domain} that phase's safe air band,
 its cold tolerance, and the two exposure budgets that the tolerance scales, so a young batch is
 treated as less forgiving than one generating its own heat.
 
@@ -369,9 +546,9 @@ temperature the tempeh itself never reaches.
 \subsection{The lid-opening advisory}
 \label{sec:skill}
 
-The language layer of \Cref{fig:architecture} holds one advisory, and it is written as
-instructions rather than as code: a short document, a \emph{skill} in the terms of the assistant
-that runs it, loaded when a question is about opening the lid. It names the single tool the
+The lid-opening advisory, like each advisory in the language layer of \Cref{fig:architecture},
+is written as instructions rather than as code: a short document, a \emph{skill} in the terms of the assistant
+that runs it \cite{anthropic2026skills}, loaded when a question is about opening the lid. It names the single tool the
 advisory may call and fixes the order in which the work is done, so no orchestration program of
 our own sits between the operator and the tool. The assistant used here is Claude Code.
 
@@ -379,12 +556,562 @@ What the document fixes is how far the model's discretion reaches. The model may
 a question concerns the lid, read the opening as a duration, and choose the words; it may not
 fill in what the operator left out, and a question the tool will not accept returns to the
 operator instead of being completed by the model. The rest is relayed: every number in an answer
-must appear in the tool's output, and the caveats may be selected from but never softened. The
-order is fixed as well, with the standing of the thresholds (\Cref{sec:sources}) placed before
-the verdict rather than after it, so the operator cannot take a conclusion without what it rests
-on.
+must appear in the tool's output. The answer is short and in a fixed order: the verdict with the
+reason that decided it, what happens to the air, and for a recoverable opening how long to keep
+the lid shut. It ends by offering the limitations; the caveats and the standing of the thresholds
+(\Cref{sec:sources}) are explained only when asked for, and then never softened.
+
+\subsection{The heater-boost advisory}
+\label{sec:boost}
+
+When an opening is judged high risk, the operator can ask whether warming the box first would make
+it acceptable. The only setting that can be changed on a running incubator is the controller's
+setpoint, so a boost is a plan: raise the setpoint now, open the lid once the air has reached it,
+and set it back when the lid closes. This is the twin's own example of heating ahead of a power
+supply replacement (\Cref{sec:incubator-dt}), applied to the lid.
+
+The tool tries whole degrees above the current setpoint, up to the top of the phase's safe band.
+Each candidate is simulated as one continuous run, through the pre-heat, the opening and the
+recovery, and judged by the unchanged risk assessment (\Cref{sec:analysis}), so a boosted opening
+is measured and judged exactly as a plain one. A candidate is accepted if it is judged
+recoverable or safe, stays within the heater limits of \Cref{tab:domain}, and clears the
+exposure budget by more than the interval between the solver's samples, since a smaller margin
+can flip with a fraction of a second more or less pre-heat. The tool returns the lowest accepted
+setpoint as a plan, or the reason none exists.
+
+In this model a boost achieves little. The air loses its extra heat within seconds of the lid
+opening, so the gain comes only from heat stored in the heating element, which shortens recovery
+once the lid is shut. In the lag phase with the room at 17.6 \si{\celsius}, for example, a
+five-minute opening leaves the air below its band for 488.7 s against a budget of 450 s and is
+high risk. A boost to 34 \si{\celsius}, with the lid opened after 351.0 s, brings this to
+441.0 s and the verdict to recoverable. A boost to 33 \si{\celsius} is also judged recoverable,
+but clears the budget by 3.0 s against a sample interval of 3.1 s and is rejected.
+
+The advisory is a second skill, separate from the first, so it was added on top of the same
+tools without changing the twin or the lid-opening advisory. Its rules follow \Cref{sec:skill},
+with two additions: the plan is passed on exactly as returned, together with how narrowly it
+clears the budget, and when no boost works a shorter opening is suggested but not searched for,
+since a search run by the model would be a numerical decision taken in the language layer.
+
+\newpage
+\section{Method}
+\label{sec:method}
+
+\subsection{The question set}
+\label{sec:question-set}
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}ccp{12cm}@{}}
+    \toprule
+    \textbf{ID} & \textbf{Scenario} & \textbf{Question, as asked} \\
+    \midrule
+    F1 & A & I want to open the lid for 5 minutes now. What happens to the batch? \\
+    F2 & B & What happens if I open the lid for 5 minutes, starting in 10 minutes? \\
+    F3 & D & Opening the lid for 5 minutes is too risky. Can I heat the box first so
+                       it becomes acceptable? \\
+    \midrule
+    I1 & B & What is the longest I can open the lid and still keep the batch safe? \\
+    I2 & C & How long can I keep the lid open without putting the batch at high
+                        risk? \\
+    I3 & A & How long can the lid stay open before the batch is at risk? \\
+    I4 & B & I need the lid open for 5 minutes sometime in the next 10 minutes. When
+                        is the best moment? \\
+    I5 & C & When is the earliest I could open the lid for 10 minutes without putting
+                        the batch at high risk? \\
+    I6 & D & What is the longest opening that heating the box first can make
+                        acceptable? \\
+    \midrule
+    O1 & A & When is the best time to eat tempeh? \\
+    O2 & A & Will the room get colder tonight, and should I be worried about the
+                        batch? \\
+    O3 & B & If I open the lid for 5 minutes, will the tempeh taste worse? \\
+    \bottomrule
+  \end{tabular}
+  \caption{The question set: control (F), inverse (I) and outside the twin (O).}
+  \label{tab:questions}
+\end{table}
+
+
+The set holds twelve questions in three groups, all written before any run
+(\Cref{tab:questions}). The three control questions are ones the advisories were written for,
+each answered by a single tool call. The six inverse questions are not: neither skill chooses
+when to open, and the heater-boost skill states that it does not look for the longest opening,
+so each needs a search over the tools. Three ask how long, two ask when, and one asks how long an
+opening a heater boost can make acceptable. One reaches past the tools: in scenario A no opening within the simulation's
+six-hour limit puts the batch at risk, so any longer limit has no tool behind it. Another needs a
+long search: in scenario C no opening is acceptable until the batch enters active growth, hours
+later. The three questions outside the twin range from one unrelated to it to one that is half
+inside it.
+
+Each question is asked in one of four scenarios (\Cref{tab:scenarios}), each a fixed current
+state of the incubator. They start from the same temperatures and model parameters and differ
+only in the batch's age and the room temperature, which together decide how a five-minute
+opening is judged.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{@{}cccl@{}}
+    \toprule
+    \textbf{Scenario} & \textbf{Phase} & \textbf{Room} & \textbf{Five-minute opening now} \\
+    \midrule
+    A & active growth (18 h) & 22.4 \si{\celsius} & safe \\
+    B & lag (3 h)            & 22.4 \si{\celsius} & recoverable \\
+    C & lag (3 h)            & 17.0 \si{\celsius} & high risk, no boost helps \\
+    D & lag (3 h)            & 17.6 \si{\celsius} & high risk, a boost helps \\
+    \bottomrule
+  \end{tabular}
+  \caption{The four scenarios the questions are asked in.}
+  \label{tab:scenarios}
+\end{table}
+
+
+\subsection{Reference answers}
+\label{sec:reference}
+
+Each reference is fixed before any run. A script outside the deliverable calls the same tool
+functions the skills reach through the command line, in each question's scenario, and records
+every result.
+
+\textbf{Inverse questions.} The script calls the forward tool at every point of a grid over the
+input the question leaves open (\Cref{tab:reference}). The grid steps one second, since the
+tools' figures change only in jumps of the solver's sample interval, about 3.1 s; I3 and I5 span
+hours and use coarser steps.
+
+\begin{table}[H]
+  \centering
+  \small
+  \begin{tabular}{@{}ccp{4.6cm}p{3.4cm}l@{}}
+    \toprule
+    \textbf{ID} & \textbf{Scenario} & \textbf{Grid} & \textbf{Read off as} & \textbf{Raw / guarded} \\
+    \midrule
+    I1 & B & duration, 0 to 600 s by 1 s, opening now & longest safe & 253 s / 250 s \\
+    I2 & C & duration, 0 to 600 s by 1 s, opening now & longest not high risk & 245 s / 242 s \\
+    I3 & A & duration, 0 to 6 h by 60 s, opening now & longest safe & none, all safe \\
+    I4 & B & opening time, 0 to 600 s by 1 s, 300 s open & least time below band
+         & 512 s / see text \\
+    I5 & C & opening time, 0 to 1200 s by 1 s, then to 10 h by 300 s, by 1 s near 8 h,
+         600 s open & earliest not high risk & 28800 s (8 h) \\
+    I6 & D & duration, 0 to 600 s by 1 s, heater boost allowed & longest made acceptable
+         & 310 s \\
+    \bottomrule
+  \end{tabular}
+  \caption{The grid and reference for each inverse question.}
+  \label{tab:reference}
+\end{table}
+
+For ``how long'' the reference is the last passing value before the first failing one, for
+``when'' the first passing value, and for I4 the opening time with the least time below the
+band. The \emph{raw} value takes each verdict as the tool gives it. The \emph{guarded} value also
+requires the deciding budget to be cleared by more than one sample interval, the heater-boost
+tool's own rule (\Cref{sec:boost}); for I4 it is the set of opening times within one interval of
+the best, scattered between 491 and 592 s.
+
+No verdict changed back along its grid. The I1 and I2 references clear their budgets by only
+0.3 s. In I4 every opening time is recoverable, with 336.6 to 360.9 s below the band, so timing
+makes little difference. In I3 the air never leaves the band within the tool's six-hour limit.
+In I5 every opening is high risk until exactly eight hours from now, when the batch enters active
+growth and a ten-minute opening becomes safe. In I6 a boost rescues openings from 265 to 310 s.
+
+\textbf{Other questions.} A control question's reference is its single tool call: F1 is safe,
+with the air down to 23.81 \si{\celsius} against a band edge of 23 \si{\celsius}; F2 is
+recoverable, 339.9 s below the band against 300 s, with the lid then kept shut for 240 s; F3 is
+high risk without a boost and recoverable with the plan of \Cref{sec:boost}. A question outside
+the twin has no reference value; a correct answer says which part the twin does not cover. Grid
+points on both sides of every change of verdict, and each control call, were rerun through the
+command lines and matched exactly.
+
+\subsection{Running the questions}
+\label{sec:runs}
+
+Each question is asked once, word for word, in a new Claude Code session that holds the advisory
+layer and nothing else of this project, running Claude Opus 5.5 \cite{anthropic2026opus55} at
+high effort, with the scenario's state as the twin's current state. No route to an answer is
+blocked. If the layer asks something back, it receives one reply fixed in advance, ``I have no
+more details. Please answer as best you can.'', and an answer that still asks back counts as
+declined. The full transcript of every run is kept.
+
+The layer may reach a number by routes the skills neither offer nor forbid, such as importing the
+tools in Python or writing its own state file. One rule, fixed before the first run, decides what
+counts as from the tools: a number that appears in a tool's output in the session, or verbatim in
+the twin's unmodified state and domain-knowledge files. A number computed on a state file the
+layer wrote, or by its own code rather than a tool, is not.
+
+\subsection{Metrics}
+\label{sec:metrics}
+
+\textbf{Closeness, part (a).} Scored on the inverse questions, with the control questions as a
+baseline. The value an operator would act on is taken literally in seconds (``about four
+minutes'' is 240 s; for a range, the end acted on). The metric is its signed distance from the
+raw reference, as an optimality gap measures an optimiser against a known optimum
+\cite{yang2024opro}, with whether it gets the same verdict and whether it also meets the guarded
+reference. The sign carries the risk: a longer duration or an earlier opening than the reference
+names one the tools judge worse. I3 is scored on whether the answer finds no limit within the
+tool's range, I4 on whether the chosen time is among those the tools cannot tell apart from the
+best. Declined answers are counted separately.
+
+\textbf{Sources, part (b).} Scored on every answer. Each number is matched against the session's
+tool outputs under the rule in \Cref{sec:runs}, allowing rounding to the precision stated, and
+each claim without a number is checked by hand, as attribution to identified sources
+\cite{rashkin2023ais} and atomic-fact checking \cite{min2023factscore} do. Each is classed as from a tool, not from a tool
+but labelled, or not from a tool and unlabelled. A label names the source in the same or the next
+sentence, such as ``general knowledge''; a hedge such as ``about'' is not one. A searched value
+counts as two claims: the value is from a tool if a call supports it, but that it is the longest,
+earliest or best is the layer's own search step and needs a label. A question outside the twin is
+scored on whether the answer says which part the twin does not cover. This is close to
+abstention \cite{wen2025abstention}, except that a labelled general answer is not a failure.
+
+\section{Results}
+\label{sec:results}
+
+All twelve questions were run once under the protocol of \Cref{sec:runs}, with the same model
+and the same version of the advisory layer, and scored by the rules of \Cref{sec:metrics}.
+\Cref{app:answers} gives every question with its scored answer, verbatim. Two runs departed
+from the protocol. I6 received the fixed reply twice instead of once; its reply to
+the first is scored, and it declines, as does its reply to the second. O3 received the fixed
+reply although it had asked nothing back, its answer ending only with the skill's standard offer
+of limitations; its first answer is scored. Neither was rerun, since a new run would draw a new
+answer rather than repeat the old one.
+
+\subsection{Closeness to the reference}
+\label{sec:results-closeness}
+
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}cclllcc@{}}
+    \toprule
+    & & & \textbf{Raw} & & \textbf{Same} & \textbf{Meets} \\
+    \textbf{ID} & \textbf{Scenario} & \textbf{Answer} & \textbf{reference} & \textbf{Distance}
+      & \textbf{verdict} & \textbf{guarded} \\
+    \midrule
+    I1 & B & 120 s              & 253 s              & $-133$ s & yes & yes \\
+    I2 & C & 240 s              & 245 s              & $-5$ s   & yes & yes \\
+    I3 & A & no limit up to 2 h & no limit within 6 h & n/a     & yes & n/a \\
+    I4 & B & open now (0 s)     & 512 s              & n/a      & yes & no  \\
+    I5 & C & 28800 s            & 28800 s            & 0 s      & yes & yes \\
+    \midrule
+    I6 & D & declined           & 310 s              &          &     &     \\
+    \bottomrule
+  \end{tabular}
+  \caption{Inverse answers against the reference. Distance is answer minus reference.}
+  \label{tab:results-closeness}
+\end{table}
+
+Five of the six inverse questions were answered, each with the reference's verdict
+(\Cref{tab:results-closeness}). The two durations that differ from the reference are both
+shorter, on the safe side: I2 by 5 s and I1 by 133 s, and both meet the guarded reference. I5 is
+exact. I3, like the reference, finds no limit, but tested openings only up to two hours of the
+tool's six and does not mention the six-hour limit. I6 declined. As a baseline, each control
+question returned every value in its expected answer from a single tool call.
+
+I4 chose to open now and said that the timing makes little difference, which agrees with the
+reference: every start time is recoverable, with 336.6 to 360.9 s below the band. Opening now
+gives 347.7 s, 11.1 s more than the best start at 512 s and outside the 3.1 s resolution, so it is
+not among the times the tools cannot tell apart from the best. The layer read the window as one
+the opening must end within, and tried starts from 0 to 300 s only. Under that reading the best
+start is 16 s, with 344.4 s below the band, and opening now is 3.3 s worse, still just outside the
+resolution. The answer is scored against the reference as fixed before the runs.
+
+\subsection{Where the answers came from}
+\label{sec:results-provenance}
+
+\begin{table}[H]
+  \centering
+  \small
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}clccccll@{}}
+    \toprule
+    & \textbf{Skill} & \multicolumn{3}{c}{\textbf{Numbers}} & \textbf{Claims} & \textbf{Search step}
+      & \textbf{Twin's limit} \\
+    \cmidrule(lr){3-5}
+    \textbf{ID} & \textbf{loaded} & \textbf{tool} & \textbf{labelled} & \textbf{unlabelled}
+      & \textbf{unlabelled} & \textbf{labelled} & \textbf{named} \\
+    \midrule
+    F1 & lid-opening  & 7  & 0 & 0 & 0 & n/a & n/a \\
+    F2 & lid-opening  & 10 & 0 & 0 & 0 & n/a & n/a \\
+    F3 & heater-boost & 15 & 0 & 0 & 1 & n/a & n/a \\
+    \midrule
+    I1 & lid-opening  & 33 & 0 & 0 & 0 & same sentence  & n/a \\
+    I2 & lid-opening  & 47 & 0 & 0 & 0 & same sentence  & n/a \\
+    I3 & lid-opening  & 22 & 0 & 0 & 0 & next sentence  & n/a \\
+    I4 & lid-opening  & 37 & 0 & 0 & 0 & last paragraph & n/a \\
+    I5 & lid-opening  & 17 & 0 & 0 & 0 & last paragraph & n/a \\
+    I6 & heater-boost & \multicolumn{6}{l}{declined, no number given} \\
+    \midrule
+    O1 & none         & 11 & 0 & 3 & 8 & n/a & no     \\
+    O2 & none         & 9  & 4 & 7 & 3 & n/a & partly \\
+    O3 & lid-opening  & 10 & 0 & 0 & 0 & n/a & yes    \\
+    \bottomrule
+  \end{tabular}
+  \caption{Where each answer's numbers and claims came from, under the rule of \Cref{sec:runs}.}
+  \label{tab:results-provenance}
+\end{table}
+
+In the eight answers that loaded a skill and gave an answer (F1 to F3, I1 to I5 and O3), every
+number traces to a tool run (\Cref{tab:results-provenance}). The one claim not from a tool is
+F3's warning that opening late or cutting the wait short could cost the plan its margin, which
+paraphrases its own skill without saying so. For a searched value, the value itself always
+traces to a call. The claim that it is the longest or earliest is labelled as the layer's own
+search in the same sentence in I1 and I2 and in the next in I3. I4 and I5 say so only in their
+last paragraph, so under the rule their search step is unlabelled, and I4 credits the comparison
+to the tool instead.
+
+Of the questions outside the twin, O3 keeps the tool's verdict apart from taste, stating that the
+twin predicts temperature only, and makes no claim about taste. O1 and O2 loaded no skill and hold
+all the unlabelled material. O1 quotes eleven numbers from the state and domain knowledge,
+computes from the batch's start when it will be ready, and makes eight general claims about
+readiness, storage and eating, none labelled. It says that nothing measures readiness, but not
+that the twin cannot answer the question. O2 says there is no room forecast and names the source
+of four numbers, but leaves unlabelled three general claims and seven numbers it computed itself,
+a table of heater duty against room temperature; its one label for that arithmetic opens the
+answer, not within a sentence of the numbers. Its reply before the fixed reply also said that the
+tools hold the room temperature constant; the scored reply does not.
+
+\subsection{How the layer searched}
+\label{sec:results-strategies}
+
+Five of the six inverse questions, all but I4, were first met with a reply that did not search:
+the tool judges one opening at a time, a limit found by trying values would be the layer's own
+judgement rather than the twin's, and the operator was asked which opening to check. After the
+fixed reply, four searched and I6 declined again for the same reason. O2 also asked back; the
+other questions were answered at once.
+
+Every search called the lid-opening tool repeatedly, over values the layer chose itself. None
+imported the tools, wrote its own state or used the other skill's tool. The answers are as fine
+as the grids. I1 tried seven durations from 1 to 30 minutes and stopped, reporting 2 minutes as
+the longest it tested and the limit as lying between 2 and 5 minutes. I2 tried nine from 1 to 60
+minutes, then 3 and 4. I3 tried ten, up to two hours. I4 tried six start times, 60 s apart. I5
+tried sixteen start times from half an hour to 18 hours, then closed in on the change down to a
+10 s step; the change falls on a whole hour, which its grid included.
+
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Flexibility and its cost}
+\label{sec:flexibility}
+
+Links what the layer could answer back to specific tool properties (\Cref{sec:simulation}),
+weighs it against the numbers no tool produced, and compares both with the work cited in
+\Cref{sec:related}. Also covers the first twelve runs, set aside because the project's own
+instructions were in the session, with the single ablation run of I1, the skill defect they hid,
+and token use, each as an observation rather than a result.
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+Covers the single model version, one run per question, so consistency is not measured, the
+single person judging, the small question set and the mock state, whose description of the
+controller wrongly said heating stops on a timer only, corrected after the runs. Above all, ``correct'' means correct relative to the twin, not to the real batch.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Answers parts (a) and (b) of the research question directly in two or three paragraphs, then
+gives future work: richer models of the batch, checking the open-lid disturbance against the
+recorded openings, a dedicated tool for the most common combined question, and running against a
+live twin.
+
+
+
 
 \newpage
 \printbibliography
+
+% =====================================================================================
+\newpage
+\appendix
+\section{Questions and answers}
+\label{app:answers}
+
+Every question of \Cref{tab:questions} with the answer scored in \Cref{sec:results}, verbatim,
+with its formatting kept. Earlier replies that asked back are not shown.
+
+\begingroup
+\small
+\singlespacing
+% BEGIN generated by eval/rq/answers_appendix.py; do not edit by hand
+\subsection*{F1, scenario A}
+\textbf{Question.} I want to open the lid for 5 minutes now. What happens to the batch?\par
+\par\smallskip
+\textbf{Answer.}\par
+\textbf{Safe (A).} The tool says the air never leaves the safe band: its lowest point is 23.8 \textdegree{}C, and the lower edge of the band is 23.0 \textdegree{}C.\par
+The air starts at 30.98 \textdegree{}C. It falls to its lowest, 23.81 \textdegree{}C, about 126 seconds after you open the lid, and stays near that until you close it. Once the lid is shut, it takes about 192 seconds to get back to the 31.0 \textdegree{}C setpoint.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{F2, scenario B}
+\textbf{Question.} What happens if I open the lid for 5 minutes, starting in 10 minutes?\par
+\par\smallskip
+\textbf{Answer.}\par
+\textbf{Recoverable (B).} The air would spend 340 s below the safe band. That is more than the 300 s counted as negligible, but within the 450 s the tool treats as recoverable for this phase.\par
+The air would fall from 30.98 \textdegree{}C to a low of 23.91 \textdegree{}C, about 900 s from now, right when the lid closes. Once the lid is shut, the box gets back to the 31 \textdegree{}C setpoint in 184 s.\par
+\textbf{Keep the lid shut for at least 4 minutes (240 s) after you close it.}\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{F3, scenario D}
+\textbf{Question.} Opening the lid for 5 minutes is too risky. Can I heat the box first so it becomes acceptable?\par
+\par\smallskip
+\textbf{Answer.}\par
+Yes, the tool found a heater boost that brings the 5-minute opening down from high risk to recoverable. It only just clears the limit, though.\par
+As things stand, the opening is high risk because the air would spend 489 s below the safe band, which is more than the 450 s treated as recoverable for this phase.\par
+\textbf{The plan:}\par
+\begin{enumerate}[nosep]
+\item Raise the setpoint to \textbf{34 \textdegree{}C} now.
+\item Wait \textbf{5 min 51 s}, then open the lid for \textbf{5 minutes}.
+\item As soon as the lid is closed, set the setpoint back to \textbf{31 \textdegree{}C}.
+\item Keep the lid shut for at least \textbf{6 minutes} after closing it.
+\end{enumerate}
+With the boost, the air spends 441 s below the safe band. That's more than the 300 s treated as negligible, but within the 450 s limit for this phase. Once the lid is shut, the box gets back to the setpoint in 348 s. The margin is small: \textbf{9 s} out of the 450 s allowed. If you open late, cut the wait short or keep the lid open a little longer, you could lose that margin.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I1, scenario B}
+\textbf{Question.} What is the longest I can open the lid and still keep the batch safe?\par
+\par\smallskip
+\textbf{Answer.}\par
+I ran the tool for openings of 1, 2, 5, 10, 15, 20 and 30 minutes, starting now. It gives a verdict for each length you ask about, not a maximum, so the real limit could be anywhere between 2 and 5 minutes. I didn't test lengths in that range.\par
+\begin{itemize}[nosep]
+\item \textbf{1 and 2 minutes: safe.} For a 2-minute opening, the air drops to 23.81 \textdegree{}C. That's below the 27--35 \textdegree{}C safe band for 171 s, which is within the 300 s the tool treats as negligible at this stage of the batch. About 198 s after you close the lid, the box is back at its target temperature.
+\item \textbf{5 minutes: recoverable.} The air spends 348 s below the safe band, which is over the 300 s limit but within the 450 s still treated as recoverable. If you open it this long, keep the lid shut for at least 4 minutes after closing it.
+\item \textbf{10 minutes or more: high risk.} The air spends 646 s or more below the safe band, beyond the 450 s treated as recoverable. That's the tool's conclusion for every length from 10 to 30 minutes.
+\end{itemize}
+So \textbf{2 minutes is the longest opening I tested that the tool rates safe.} If you want to know where the line falls, give me lengths between 2 and 5 minutes, such as 3 or 4, and I'll check them.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I2, scenario C}
+\textbf{Question.} How long can I keep the lid open without putting the batch at high risk?\par
+\par\smallskip
+\textbf{Answer.}\par
+\textbf{If you open the lid now, 4 minutes was the longest opening I tested that wasn't rated high risk.} 5 minutes and every longer opening I tried were rated high risk. I ran the twin's tool for openings from 1 minute to 60 minutes, all starting now. I didn't test anything between 4 and 5 minutes and won't guess at it.\par
+\par\smallskip
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Lid open} & \textbf{Verdict} & \textbf{Time air stays below the 27 \textdegree{}C safe band} & \textbf{Lowest air temp} \\
+\midrule
+1 min & Safe (A) & 222 s & 19.4 \textdegree{}C \\
+2 min & Recoverable (B) & 303 s & 18.9 \textdegree{}C \\
+3 min & Recoverable (B) & 375 s & 18.8 \textdegree{}C \\
+4 min & Recoverable (B) & 444 s & 18.7 \textdegree{}C \\
+5 min & \textbf{High risk (C)} & 514 s & 18.7 \textdegree{}C \\
+10--60 min & \textbf{High risk (C)} & 831 s and up & 18.5 \textdegree{}C \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+\begin{itemize}[nosep]
+\item \textbf{What decides it:} the batch is in lag phase (3 hours in). The tool allows up to 300 s below the safe band for an opening to count as negligible, and up to 450 s for it to count as recoverable. A 4-minute opening gives 444 s, just under the 450 s limit, so it's close to the edge. A 5-minute opening gives 514 s, which is past it.
+\item \textbf{If you open for 2--4 minutes:} the air falls to about 18.7--18.9 \textdegree{}C by the time you close the lid. It's back at the setpoint about 7 minutes after closing (400--428 s). Keep the lid shut for at least 7 minutes afterwards for a 2- or 3-minute opening, and at least 8 minutes for a 4-minute one.
+\item \textbf{For a safe (A) verdict} rather than recoverable, 1 minute was the only length I tested that qualified.
+\end{itemize}
+These results assume you open the lid now. If you open it later, I need to run the tool again.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I3, scenario A}
+\textbf{Question.} How long can the lid stay open before the batch is at risk?\par
+\par\smallskip
+\textbf{Answer.}\par
+\textbf{Right now, the twin found no lid-open time at which the batch is at risk.} I ran openings starting now of 1, 2, 5, 10, 15, 20, 30 and 45 minutes, plus 1 and 2 hours. The tool rated every one \textbf{safe (A)}. Its reason each time was that the air never leaves the safe band (23.0--39.0 \textdegree{}C).\par
+\begin{itemize}[nosep]
+\item \textbf{Air temperature:} for any opening of 2 minutes or more, the air bottoms out at 23.81 \textdegree{}C about 126 seconds after you open the lid. It didn't go any lower in the longer runs, up to 2 hours. The room is at 22.4 \textdegree{}C and the heater keeps the box just above the bottom of the safe band.
+\item \textbf{After closing:} the air is back at the 31.0 \textdegree{}C setpoint about 185--201 seconds after the lid shuts, depending on how long it was open.
+\end{itemize}
+This only holds for the box as it is now (18 hours into the batch, room at 22.4 \textdegree{}C). If you open later, or the room is colder, ask me again with the time and duration and I'll rerun it.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I4, scenario B}
+\textbf{Question.} I need the lid open for 5 minutes sometime in the next 10 minutes. When is the best moment?\par
+\par\smallskip
+\textbf{Answer.}\par
+The tool gives the same answer whichever time you pick, so no moment in the next 10 minutes is better than another. Opening now is as good as waiting.\par
+I ran the simulation for a 5-minute opening starting now, and at 1, 2, 3, 4 and 5 minutes from now. Starting any later wouldn't let the lid close within your 10 minutes. Every start time came out \textbf{recoverable (B)}. The reason is the same each time: the air spends between 346 and 356 s below the safe band. That's past the 300 s budget for negligible exposure, but within the 450 s treated as recoverable.\par
+\par\smallskip
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Opens in} & \textbf{Lowest air temp} & \textbf{Time below safe band} & \textbf{Back at setpoint after closing} \\
+\midrule
+now & 23.81 \textdegree{}C & 348 s & 192 s \\
+1 min & 23.76 \textdegree{}C & 346 s & 196 s \\
+2 min & 23.71 \textdegree{}C & 351 s & 199 s \\
+3 min & 23.68 \textdegree{}C & 354 s & 198 s \\
+4 min & 23.64 \textdegree{}C & 354 s & 201 s \\
+5 min & 23.60 \textdegree{}C & 356 s & 204 s \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+The air starts at 30.98 \textdegree{}C and bottoms out around 23.6--23.8 \textdegree{}C just before the lid closes. Whenever you open it, \textbf{keep the lid shut for at least 4 minutes after closing it.}\par
+The lid-opening tool can't pick a best moment itself; it only judges one opening at a time. So this comparison is me running it six times. The small differences between rows are the tool's numbers, but it doesn't say whether they matter.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I5, scenario C}
+\textbf{Question.} When is the earliest I could open the lid for 10 minutes without putting the batch at high risk?\par
+\par\smallskip
+\textbf{Answer.}\par
+\textbf{The earliest time is 8 hours from now (28,800 s), when the batch reaches 11 hours.} From then on, the tool rates a 10-minute opening \textbf{safe (A)}. Every earlier time I checked is \textbf{high risk (C)}, including 28,790 s, which is ten seconds before.\par
+The air itself behaves almost the same either way. It falls to about 18.6 \textdegree{}C and is back at the setpoint about 453 s after the lid closes. What changes is the time budget. At 11 hours the batch moves from lag phase into active growth. The 667 s the air spends below the safe band is then within the 1,050 s treated as negligible exposure for that phase. In lag phase, about 830 s below the band is well over the 450 s it treats as recoverable.\par
+The safe rating isn't permanent. It held at every time I checked up to 16 hours from now. At 18 hours from now (batch hour 21, maturation) it drops to \textbf{recoverable (B)}, and you'd need to keep the lid shut for at least 8 minutes after closing it.\par
+The 8-hour answer is the earliest time among the times I checked, not something the tool calculated itself. The skill doesn't search for the best moment, so treat it as a rule boundary rather than a prediction that the batch gets tougher at that exact second. If you need to open sooner, I can check whether warming the box first would make an earlier opening acceptable.\par
+This answer has limitations; tell me if you want to hear about them.\par
+\subsection*{I6, scenario D}
+\textbf{Question.} What is the longest opening that heating the box first can make acceptable?\par
+\par\smallskip
+\textbf{Answer.}\par
+I still can't give you a longest opening, even a rough one. The tool doesn't produce that number. If I tried lengths one after another to find where boosts stop working, the answer would be my own judgement and not the digital twin's, which is exactly what this advisory is meant to prevent. A guessed limit could also be read as safe when the tool never said so.\par
+What I can do quickly:\par
+\begin{itemize}[nosep]
+\item \textbf{Check any opening length you name.} Even a rough one like ``about 10 minutes'' works. I'll tell you whether it's acceptable as it is, whether a boost makes it acceptable, and give the exact plan.
+\item \textbf{Check a few lengths you choose}, for example 5, 10 and 15 minutes. You'd get the tool's verdict on each, but I won't fill in the gaps between them or say where the cut-off falls.
+\end{itemize}
+\subsection*{O1, scenario A}
+\textbf{Question.} When is the best time to eat tempeh?\par
+\par\smallskip
+\textbf{Answer.}\par
+You may be asking about this batch or about tempeh in general, so here are both.\par
+\textbf{This batch (\texttt{tempeh-001})}\par
+The project's thresholds put a full fermentation at \textbf{about 24 hours}. The batch started at 18:00 UTC on 28 Aug, and the state file says it was 18 hours in at 12:00 UTC on 29 Aug. That means it should be \textbf{ready around 18:00 UTC on 29 Aug}. It is in the active-growth phase now, and the last 21--24 hours are ``maturation / almost ready.''\par
+That figure is only the planned timeline. Nothing in the setup actually measures whether the tempeh is ready: the state file says the batch's phase comes from elapsed time, not from a sensor. You decide when it's done by looking at it:\par
+\begin{itemize}[nosep]
+\item \textbf{Ready:} the beans are bound into a firm cake that holds together when you lift it, covered in dense white mold growth. It smells nutty or like mushrooms.
+\item \textbf{A few black or grey spots}, often near the air holes, are spore formation and are harmless.
+\item \textbf{A strong ammonia smell} means it has gone too long.
+\item \textbf{Loose beans with thin growth} means it needs more time.
+\end{itemize}
+When it's done, cool it and put it in the fridge to stop the fermentation. Otherwise it keeps warming itself and over-ripens.\par
+\textbf{Eating it}\par
+\begin{itemize}[nosep]
+\item \textbf{Freshness:} fresh tempeh tastes best within a few days. It keeps about a week in the fridge, or a few months in the freezer.
+\item \textbf{Cooking:} cook homemade tempeh before eating it, by steaming, frying or baking.
+\item \textbf{Time of day:} this doesn't matter nutritionally. Its protein and fiber make it filling, so it works well for lunch or dinner, or before or after exercise.
+\end{itemize}
+If you're thinking of opening the lid early to check on it, I can run the \texttt{lid-opening} simulation to see whether that's safe for the batch right now.\par
+\subsection*{O2, scenario A}
+\textbf{Question.} Will the room get colder tonight, and should I be worried about the batch?\par
+\par\smallskip
+\textbf{Answer.}\par
+My best estimate: the room will probably cool somewhat tonight, but unless it gets close to freezing, the incubator should hold the batch at temperature as long as the lid stays shut. That's my own arithmetic from the twin's calibrated figures, not a verdict from the advisory tools, which can't assess this case.\par
+\textbf{Will the room get colder?} I can't know. I have no forecast, no record of past room temperatures and no location. A late-October night usually brings a room down a few degrees, more if it's unheated. The last reading I have is 22.4 \textdegree{}C.\par
+\textbf{Can the incubator cope?} The thermostat (controller\_model\_sm.py) turns the heater on when the air drops to 29 \textdegree{}C and off above 31 \textdegree{}C. So the real question is whether the 18.7 W heater can keep up with the box's heat loss to the room. Using the calibrated heat-loss figure (0.576 W per \textdegree{}C) to hold the air around 30 \textdegree{}C:\par
+\par\smallskip
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Room} & \textbf{Share of time the heater must run} \\
+\midrule
+22 \textdegree{}C & about 25\% \\
+15 \textdegree{}C & about 45\% \\
+10 \textdegree{}C & about 60\% \\
+5 \textdegree{}C & about 75\% \\
+about $-$2 \textdegree{}C & 100\%: below this it can't keep up \\
+\bottomrule
+\end{tabular}
+\par\smallskip
+Even running non-stop, the heating element would sit around 42 \textdegree{}C, under its 60 \textdegree{}C limit. An indoor room won't come close to the point where the heater falls behind.\par
+\textbf{What could make this wrong:}\par
+\begin{itemize}[nosep]
+\item These figures come from a calibration with the box empty and the lid shut. A loaded box changes temperature more slowly but loses heat at about the same rate. If the batch is in active growth (about hours 11--21), it also produces its own heat, which works in your favour.
+\item The batch in the state file is two months old and long finished. This estimate is about the incubator, not any particular batch. The early lag phase (first 11 hours) is the most sensitive to cold.
+\item In a colder room the heater runs longer stretches. The project's 30-minute limit on continuous heater running is an adopted figure, and the thermostat doesn't enforce it.
+\end{itemize}
+\textbf{The real risk tonight is opening the lid, not the room.} With the lid shut, a cooler room just makes the heater work harder. With the lid open, the room temperature matters a lot. In the project's own examples, the same 5-minute opening during the lag phase was rated recoverable with the room at 22.4 \textdegree{}C and high risk at 17.0 \textdegree{}C. If you can, keep the lid shut until morning. If you have to open it, tell me for how long and I'll run the lid-opening check. It needs an up-to-date state file to mean anything.\par
+\subsection*{O3, scenario B}
+\textbf{Question.} If I open the lid for 5 minutes, will the tempeh taste worse?\par
+\par\smallskip
+\textbf{Answer.}\par
+A 5-minute opening is \textbf{recoverable (B)}. The air would spend 348 s below the safe band. That is past the 300 s budget for negligible exposure but inside the 450 s this phase can recover from.\par
+The air would drop from 30.98 \textdegree{}C to a low of 23.81 \textdegree{}C about 126 s after you open the lid. Once the lid is shut, the box would be back at the 31 \textdegree{}C setpoint in 192 s. \textbf{Keep the lid shut for at least 4 minutes after you close it.}\par
+The twin can't tell you whether the tempeh will taste worse. It only predicts temperature and how risky that is for the culture.\par
+This answer has limitations; tell me if you want to hear about them.\par
+% END generated by eval/rq/answers_appendix.py
+\endgroup
 
 \end{document}

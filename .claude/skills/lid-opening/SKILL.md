@@ -31,7 +31,7 @@ it as `--open-at-s`. Otherwise leave it out; the tool assumes now.
 
 ## Step 2: run the tool
 
-From this folder:
+From the folder that holds `tools/` and `.venv/` (the product's root, not this skill's folder):
 
 ```
 .venv/Scripts/python.exe -m tools.cli --duration-s <SECONDS> [--open-at-s <SECONDS>]

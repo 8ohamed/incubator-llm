@@ -36,7 +36,7 @@ open the lid.
 
 ## Step 2: run the tool
 
-From this folder:
+From the folder that holds `tools/` and `.venv/` (the product's root, not this skill's folder):
 
 ```
 .venv/Scripts/python.exe -m tools.heater_boost_cli --duration-s <SECONDS>

@@ -66,8 +66,11 @@ def assess_lid_opening(simulation: dict, state: dict | None = None) -> dict:
     ferm = state["fermentation"]
 
     # An incubator has no sensor for the fermentation phase, so it is derived from how long the
-    # batch has been running rather than read from a field someone set by hand.
-    phase = domain_knowledge.phase_for_elapsed_hours(ferm["elapsed_hours"])
+    # batch has been running rather than read from a field someone set by hand. A later opening
+    # is judged in the phase the batch will be in when the lid opens.
+    open_at_s = float(simulation["inputs"]["open_at_s"])
+    phase = domain_knowledge.phase_at_opening(ferm["elapsed_hours"], open_at_s)
+    phase_now = domain_knowledge.phase_for_elapsed_hours(ferm["elapsed_hours"])
     band_low, band_high = domain_knowledge.safe_band_c_for_phase(phase)
     base_safe_s, base_recoverable_s = domain_knowledge.cold_exposure_budgets_s()
     tolerance = domain_knowledge.cold_exposure_multiplier_for_phase(phase)
@@ -94,7 +97,7 @@ def assess_lid_opening(simulation: dict, state: dict | None = None) -> dict:
         "option": VERDICTS[verdict],
         "keep_closed_s": keep_closed_s,
         "reasons": reasons,
-        "caveats": _caveats(phase),
+        "caveats": _caveats(phase, phase_now, open_at_s),
         "metrics": {
             "duration_s": duration_s,
             "min_t_air_c": summary["min_t_air_c"],
@@ -106,6 +109,7 @@ def assess_lid_opening(simulation: dict, state: dict | None = None) -> dict:
             "recovery_to_setpoint_s": recovery_s,
             "phase": phase,
             "elapsed_hours": ferm["elapsed_hours"],
+            "elapsed_hours_at_opening": round(ferm["elapsed_hours"] + open_at_s / 3600.0, 3),
         },
         "thresholds": {
             "cold_exposure_safe_s": budget_safe,
@@ -194,13 +198,19 @@ def _classify(cold_s, hot_s, recovered, budget_safe, budget_recoverable,
     return verdict, reasons
 
 
-def _caveats(phase: str) -> list[str]:
+def _caveats(phase: str, phase_now: str, open_at_s: float) -> list[str]:
     """The model limits that change how this verdict should be read.
 
     `MODEL_CAVEATS` applies to every verdict. The phase adds one more, because how much the
-    omitted metabolic heat matters depends on how far along the batch is.
+    omitted metabolic heat matters depends on how far along the batch is, and a later opening
+    in a different phase adds a note saying which phase it was judged in.
     """
     caveats: list[str] = list(MODEL_CAVEATS)
+    if phase != phase_now:
+        caveats.append(
+            f"The lid opens {open_at_s / 3600.0:.1f} h from now, when the batch will be in "
+            f"{phase.replace('_', ' ')}, so the opening is judged in that phase, not in the "
+            f"{phase_now.replace('_', ' ')} phase it is in now.")
     if phase == "active_growth":
         caveats.append(
             "The batch is in active growth, so its own metabolic heat, which the model omits, "

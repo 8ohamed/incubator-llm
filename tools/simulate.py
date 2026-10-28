@@ -22,7 +22,7 @@ from incubator_dt.models.controller_models.controller_model4 import ControllerMo
 from incubator_dt.models.plant_models.four_parameters_model.four_parameter_model import (
     FourParameterIncubatorPlant,
 )
-from tools.domain_knowledge import phase_for_elapsed_hours, safe_band_c_for_phase
+from tools.domain_knowledge import phase_at_opening, safe_band_c_for_phase
 from tools.state import get_current_state
 
 # The incubator controller's own execution interval, and the solver step ratio the twin's
@@ -153,8 +153,8 @@ def simulate_lid_opening(duration_s: float,
     setpoint = float(ctrl["temperature_desired_c"])
     control_low = setpoint - float(ctrl["lower_bound_c"])
     # The fermentation phase is derived from elapsed time rather than read from the state,
-    # because an incubator has no sensor for it.
-    phase = phase_for_elapsed_hours(state["fermentation"]["elapsed_hours"])
+    # because an incubator has no sensor for it, and taken at the moment the lid opens.
+    phase = phase_at_opening(state["fermentation"]["elapsed_hours"], open_at_s)
     safe_band = safe_band_c_for_phase(phase)
 
     return {

@@ -44,6 +44,16 @@ def phase_for_elapsed_hours(elapsed_hours: float, path: str | Path | None = None
     return phases[-1]["id"]
 
 
+def phase_at_opening(elapsed_hours: float, open_at_s: float,
+                     path: str | Path | None = None) -> str:
+    """The phase the batch will be in when the lid opens, ``open_at_s`` seconds from now.
+
+    An opening is judged in this phase for its whole length, recovery included, even if a
+    phase boundary falls inside it.
+    """
+    return phase_for_elapsed_hours(elapsed_hours + open_at_s / 3600.0, path)
+
+
 def safe_band_c_for_phase(phase: str, path: str | Path | None = None) -> tuple[float, float]:
     """The (min, max) air temperature this phase is considered safe within."""
     band = load_thresholds(path)["safe_band_c_by_phase"]

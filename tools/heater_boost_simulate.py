@@ -21,7 +21,7 @@ import numpy as np
 from oomodelling import ModelSolver
 
 from incubator_dt.models.controller_models.controller_model_sm import ControllerModel4SM
-from tools.domain_knowledge import phase_for_elapsed_hours, safe_band_c_for_phase
+from tools.domain_knowledge import phase_at_opening, safe_band_c_for_phase
 from tools.simulate import (
     DEFAULT_RECOVERY_BUDGET_S,
     MAX_DURATION_S,
@@ -104,8 +104,8 @@ def simulate_boosted_opening(duration_s: float,
 
     setpoint = float(ctrl["temperature_desired_c"])
     control_low = setpoint - float(ctrl["lower_bound_c"])
-    # The fermentation phase is derived from elapsed time, as for a plain opening.
-    phase = phase_for_elapsed_hours(state["fermentation"]["elapsed_hours"])
+    # The fermentation phase is derived from elapsed time at the opening, as for a plain one.
+    phase = phase_at_opening(state["fermentation"]["elapsed_hours"], open_at_s)
     safe_band = safe_band_c_for_phase(phase)
 
     # Exposure counted from now (0.0), not from the opening.

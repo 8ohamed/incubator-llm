@@ -120,8 +120,6 @@ def find_heater_boost(duration_s: float, state: dict | None = None) -> dict:
     return result
 
 
-# --------------------------------------------------------------------------- internals
-
 def _limits(safe_band_c: list[float]) -> dict:
     heater = domain_knowledge.heater_safety()
     return {
