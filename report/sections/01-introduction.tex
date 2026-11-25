@@ -1,0 +1,258 @@
+  \section{Introduction}
+  \label{sec:introduction}
+
+  \subsection{Digital twins and language models}
+  \label{sec:background}
+
+  A digital twin (DT) is a software system that mirrors a running physical system, with data
+  moving automatically in both directions between the two
+  \cite{fuller2020digitaltwin,kritzinger2018digitaltwin}. It is characterised by the services it
+  offers on top of that connection, such as monitoring, decision support and reconfiguration, and
+  it is not a control system: the physical system must keep working if the DT is switched off
+  \cite{gomes2025incubator}. This project applies the same principle one level higher up, adding a
+  layer on top of a DT that must keep working without that layer.
+
+  A large language model (LLM) is a neural network trained on large quantities of text that can
+  carry out a task described in ordinary language without being trained for it
+  \cite{brown2020fewshot}. Its output can be fluent and still wrong, stating false quantities with
+  confidence, a failure known as hallucination \cite{ji2023hallucination}. It can also call
+  external code and continue with the returned value \cite{schick2023toolformer}, which shifts its
+  responsibility from knowing a quantity to knowing which computation produces it.
+
+  The two are complementary: a DT holds a calibrated model of a process, while an LLM is easy to
+  address but has no reliable account of how any particular process behaves. \Cref{sec:related}
+  reviews the work that builds on this pairing.
+
+
+  \subsection{The incubator DT}
+  \label{sec:incubator-dt}
+
+  This project builds on the incubator DT of Gomes et al. \cite{gomes2025incubator}: an insulated
+  box with a heating element, a fan and temperature sensors, and a controller that switches the
+  heater to hold the air at a setpoint. The box is used to ferment tempeh, a food made by growing a
+  mould on cooked soybeans over roughly a day, whose success depends on the temperature staying
+  within a fairly narrow range \cite{steinkraus1960tempeh,tempehinfo_temperature}. The DT consists
+  of thermal models of the box, calibrated against its own measurements and kept supplied with live
+  data, and offers three groups of services on top of them \cite{gomes2025incubator}:
+
+  \begin{itemize}
+    \item \textbf{Visualisation and monitoring.} It presents the current and past state and
+      compares what the models predict with what the sensors report, estimating unmeasured
+      quantities from measured ones. A growing discrepancy signals that something has changed.
+    \item \textbf{Decision support.} It simulates scenarios before they happen, known as what-if
+      analysis, and searches across simulated configurations for the best trade-off. Gomes et al.
+      give two examples: heating the box above its setpoint before a power supply is replaced, with
+      simulation choosing how long to heat so that the batch neither overheats nor cools too far
+      during the outage, and mapping how controller settings trade tight temperature control
+      against heater wear.
+    \item \textbf{Reconfiguration.} When the models no longer match the hardware, it recalibrates
+      them against fresh data and re-tunes the controller.
+  \end{itemize}
+
+  None of these services is modified by this work.
+
+  \subsection{The gap this project addresses}
+  \label{sec:gap}
+
+  Consider an operator who wants to open the lid of a running batch for five minutes, and wants to
+  know beforehand whether the batch can take it. The DT can answer this in principle. It has
+  calibrated thermal models, a representation of the disturbance an open lid causes, and a
+  decision-support service meant for this kind of before-the-fact analysis, the power supply
+  example is structurally the same problem \cite{gomes2025incubator}. The gap is not a missing
+  capability but the distance between that capability and the person who needs it:
+
+  \begin{itemize}
+    \item \textbf{Using the service means building the experiment.} A what-if analysis is a
+      simulation someone configures, choosing the model, the parameters that represent the
+      disturbance, the horizon and what to extract. An operator who knows fermentation but not
+      thermal parameters has no route to it.
+    \item \textbf{The service stops at numbers.} It returns a predicted temperature over time,
+      while the operator needs a judgement about the batch. That requires knowing what the culture
+      tolerates, for how long and at which stage, and the DT does not hold that knowledge.
+    \item \textbf{Every question has to be anticipated.} The published examples exist because
+      someone foresaw those situations and wrote code for them, so what the DT can be asked is
+      fixed at development time.
+  \end{itemize}
+
+  This project investigates a natural-language advisory layer on top of these services, which turns
+  the operator's question into a correctly configured call and the result back into advice about
+  the batch, without changing how the DT computes.
+
+  \subsection{The LLM advisory layer architecture}
+  \label{sec:architecture}
+
+  The advisory is organised as three ordered layers (\Cref{fig:architecture}). A layer may call the
+  one below it and never the one above, so a quantity reaches the operator only after something
+  below has computed it.
+
+  \begin{figure}[!ht]
+    \centering
+    \setstretch{1}
+    \definecolor{archteal}{HTML}{1F7A73}
+    \definecolor{archblue}{HTML}{2F6DB5}
+    \definecolor{archsand}{HTML}{F3E7CF}
+    \resizebox{\textwidth}{!}{%
+    \begin{tikzpicture}[
+        box/.style={draw=black!70, fill=white, rounded corners=2pt, align=center,
+                    font=\small, minimum height=1.2cm, inner sep=3pt},
+        src/.style={box, minimum height=1.6cm},
+        ours/.style={fill=archteal!10},
+        dt/.style={fill=archsand},
+        cont/.style={draw=black!45, rounded corners=4pt},
+        flow/.style={-{Stealth[length=2.2mm]}, semithick, draw=archteal},
+        bflow/.style={flow, draw=archblue, dashed},
+        cflow/.style={-{Stealth[length=2.2mm]}, semithick, draw=black!60, densely dotted},
+        lab/.style={font=\scriptsize, text=archteal, align=center},
+        blab/.style={font=\scriptsize, text=archblue, align=center},
+        band/.style={draw=black!20, rounded corners=3pt},
+        bandname/.style={rotate=90, font=\footnotesize\scshape, text=black!65},
+        note/.style={font=\scriptsize\itshape, text=black!55, align=center},
+        swatch/.style={draw=black!45, minimum width=4.5mm, minimum height=3mm, inner sep=0pt},
+        legtext/.style={font=\scriptsize, inner sep=1pt}]
+
+      % Bands
+      \draw[band] (-0.9,8.6) rectangle (15.1,13.1);
+      \draw[band] (-0.9,3.2) rectangle (15.1,8.0);
+      \draw[band] (-0.9,0.0) rectangle (15.1,2.6);
+      \node[bandname] at (-0.5,10.85) {Language layer};
+      \node[bandname] at (-0.5,5.6) {Tool layer};
+      \node[bandname] at (-0.5,1.3) {Sources};
+      \node[note] at (13.8,10.85) {orchestrates\\and explains,\\predicts and\\judges nothing};
+      \node[note] at (2.2,6.9) {computes every prediction\\and verdict};
+
+      % Language layer: the skills and the harness that runs the model
+      \draw[cont, fill=archteal!10] (0.0,8.9) rectangle (3.4,12.8);
+      \node[font=\footnotesize\bfseries] at (1.7,12.45) {Skills};
+      \node[note] at (1.7,9.28) {each a description\\and instructions};
+      \draw[cont, fill=black!9] (3.8,8.9) rectangle (12.5,12.8);
+      \node[anchor=north east, font=\footnotesize\bfseries] at (12.4,12.75) {Claude Code harness};
+
+      % Nodes
+      \node[box, minimum width=3cm, rounded corners=8pt, font=\normalsize] (op) at (5.6,13.9) {Operator};
+      \node[box, minimum width=2.9cm, minimum height=0.9cm] (lidsk) at (1.7,11.5) {Lid-opening\\skill};
+      \node[box, minimum width=2.9cm, minimum height=0.9cm] (hbsk)  at (1.7,10.3) {Heater-boost\\skill};
+      \node[box, minimum width=2.8cm, minimum height=2.1cm] (llm) at (5.6,10.85)
+            {LLM\\{\scriptsize\itshape reads the question,}\\{\scriptsize\itshape chooses each command,}\\{\scriptsize\itshape writes the answer}};
+      \node[box, minimum width=3.4cm, minimum height=2.1cm] (tex) at (10.4,10.85)
+            {Tool execution\\{\scriptsize\itshape runs each command}\\{\scriptsize\itshape and returns its output}};
+      \node[box, ours, minimum width=2.3cm] (st)   at (1.4,4.6)  {State\\access};
+      \node[box, ours, minimum width=2.3cm] (sim)  at (5.2,4.6)  {Simulation};
+      \node[box, ours, minimum width=2.3cm] (risk) at (9.0,4.6)  {Risk\\assessment};
+      \node[box, ours, minimum width=2.6cm] (bo)   at (13.0,4.6) {Boost\\optimisation};
+      \node[src, dt, minimum width=3.2cm] (dts) at (1.7,1.3)  {DT state\\{\scriptsize\itshape as published}};
+      \node[src, dt, minimum width=3.8cm] (dtm) at (6.4,1.3)  {DT models\\and controllers\\{\scriptsize\itshape used unmodified}};
+      \node[src, ours, minimum width=5.0cm] (dk)  at (12.3,1.3) {Domain knowledge\\{\scriptsize\itshape sourced or estimated}\\{\scriptsize phases, bands, budgets, heater limits}};
+
+      % Attachment points
+      \coordinate (texA)  at ([xshift=-14mm]tex.south);
+      \coordinate (texB)  at ([xshift=-6mm]tex.south);
+      \coordinate (texC)  at ([xshift=6mm]tex.south);
+      \coordinate (texD)  at ([xshift=14mm]tex.south);
+      \coordinate (riskU) at ([xshift=8mm]risk.north);
+      \coordinate (boU)   at ([xshift=-4mm]bo.north);
+      \coordinate (boV)   at ([xshift=6mm]bo.north);
+      \coordinate (simM)  at ([xshift=-5mm]sim.south);
+      \coordinate (simD)  at ([xshift=4mm]sim.south);
+      \coordinate (simC)  at ([xshift=9mm]sim.south);
+      \coordinate (riskL) at ([xshift=-5mm]risk.south);
+      \coordinate (riskD) at ([xshift=10mm]risk.south);
+      \coordinate (boL)   at ([xshift=-4mm]bo.south);
+      \coordinate (boD)   at ([xshift=8mm]bo.south);
+      \coordinate (y285)  at (0,2.85);
+      \coordinate (y355)  at (0,3.55);
+      \coordinate (y66)   at (0,6.6);
+      \coordinate (y70)   at (0,7.0);
+      \coordinate (y76)   at (0,7.6);
+
+      % Operator, skills and the model's loop through the harness
+      \draw[flow] ([xshift=-4mm]op.south) -- node[lab, left, pos=0.55] {question} ([xshift=-4mm]llm.north);
+      \draw[flow] ([xshift=4mm]llm.north) -- node[lab, right, pos=0.45] {answer} ([xshift=4mm]op.south);
+      \draw[cflow] (3.4,10.85) -- (llm.west);
+      \draw[flow] ([yshift=3mm]llm.east) to[bend left=35] node[lab, above] {command} ([yshift=3mm]tex.west);
+      \draw[flow] ([yshift=-3mm]tex.west) to[bend left=35] node[lab, below] {JSON\\result} ([yshift=-3mm]llm.east);
+      \node[text=archteal, font=\large] at ($(llm.east)!0.5!(tex.west)$) {$\circlearrowright$};
+
+      % Lid-opening tool: the pipeline
+      \draw[flow] (texA) -- (texA |- y66) -| node[lab, above, pos=0.25] {duration, start time} (sim.north);
+      \draw[flow] (riskU) -- node[lab, right, pos=0.18] {verdict and\\prediction} (texB);
+      \draw[flow] (st) -- node[lab, above] {conditions} (sim);
+      \draw[flow] (sim) -- node[lab, above] {trajectory} (risk);
+
+      % Heater-boost tool and its coded loop
+      \draw[bflow] (texC) -- (texC |- y70) -| node[blab, below, pos=0.25] {duration} (boU);
+      \draw[bflow] (boV) -- node[blab, right] {verdict\\and plan} (boV |- y76) -| (texD);
+      \draw[bflow] (boL) -- (boL |- y355) -| (simD);
+      \draw[bflow] (riskL |- y355) -- (riskL);
+      \fill[archblue] (riskL |- y355) circle (1.2pt);
+      \node[text=archblue] at (14.65,4.6) {$\circlearrowright$};
+
+      % Sources
+      \draw[flow] (st.south |- dts.north) -- (st.south);
+      \draw[flow] (simM |- dtm.north) -- (simM);
+      \draw[flow] (riskD |- dk.north) -- (riskD);
+      \draw[flow] (riskD |- y285) -| (simC);
+      \fill[archteal] (riskD |- y285) circle (1.2pt);
+      \draw[bflow] (boD |- dk.north) -- (boD);
+
+      % Legend
+      \draw[flow] (-0.9,-0.6) -- ++(0.9,0) node[right, font=\scriptsize, text=black] {every request};
+      \draw[bflow] (2.4,-0.6) -- ++(0.9,0) node[right, font=\scriptsize, text=black]
+                  {heater-boost requests only, each candidate boost is simulated and assessed in turn};
+      \node[swatch, fill=black!9] (sw1) at (-0.675,-1.2) {};
+      \node[legtext, right=1mm of sw1] (lg1) {Claude Code};
+      \node[swatch, fill=archteal!10, right=5mm of lg1] (sw2) {};
+      \node[legtext, right=1mm of sw2] (lg2) {this project};
+      \node[swatch, fill=archsand, right=5mm of lg2] (sw3) {};
+      \node[legtext, right=1mm of sw3] (lg3) {existing DT};
+      \draw[cflow] ([xshift=6mm]lg3.east) -- ++(0.9,0) node[right, font=\scriptsize, text=black] {loaded into the model's context};
+    \end{tikzpicture}}
+    \caption{The advisory layer in three ordered layers, shaded by who provides each part. The
+      model works through the harness in a loop ($\circlearrowright$), one command and its result at
+      a time, and the heater-boost tool runs a coded loop of its own.}
+    \label{fig:architecture}
+  \end{figure}
+
+  The \textbf{language layer} is an LLM working in Claude Code, an agent harness, with
+  one \emph{skill} per advisory. A skill is a document of instructions whose description tells the model
+  when to load it, and whose body is loaded only when it is used \cite{anthropic2026skills}. The
+  model recognises which advisory a question belongs to, converts what the operator said into the
+  tool's parameters and issues a command, which the harness runs, returning the tool's JSON
+  output. The model may issue further commands before it answers. It orchestrates the tools and
+  explains their results, but predicts and judges nothing.
+
+  The \textbf{tool layer} computes every prediction and verdict, as a pipeline. State access assembles the
+  batch's current conditions, the simulation projects them forward under the disturbance asked
+  about, and the risk assessment reduces the trajectory to a verdict and the numbers and thresholds that
+  decided it. The verdict crosses back to the language layer together with the prediction, because
+  turning a curve into a decision about the batch must not be left to prose. The second advisory, a heater boost, reuses the same pipeline as an optimisation: each
+  candidate pre-heating strategy is scored by re-running the simulation and the risk assessment,
+  in a loop coded in the tool.
+
+  The \textbf{sources} differ in where their authority comes from. The live DT state makes an
+  answer concern this batch rather than batches in general. The DT's own models and controllers
+  are driven from outside and never altered, so numerical authority stays with the DT
+  \cite{gomes2025incubator}. Domain knowledge supplies the fermentation thresholds.
+
+  \subsection{Research question}
+  \label{sec:rq}
+
+  This project takes up the third point of the gap (\Cref{sec:gap}). The twin's tools answer
+  forward questions: given an opening of a set length, what happens to the batch. The questions an
+  operator asks next are often inverse ones, such as how long the lid can stay open or when to open
+  it. No tool answers these directly, but a search over the forward tools can, and it can be
+  provided in two ways. It can be coded as a new tool, as the heater-boost advisory does for its
+  setpoint (\Cref{sec:boost}), which means foreseeing the question. Or it can be left to the
+  LLM, which runs the existing tools itself when the question is asked. The research
+  question asks which of the two a twin should use:
+
+  \begin{quote}
+    When a DT needs to answer a new kind of question, should the answer be coded as a
+    new tool or delegated to an LLM over the existing tools?
+    \begin{enumerate}[label=(\alph*)]
+      \item If it is delegated, how close are the model's answers to how-long and when questions
+        to a search coded over the same tools, and does it say which parts the tools did not
+        compute?
+      \item What does delegating cost and save compared with coding: accuracy at the simulation's
+        resolution, tokens and time per answer, and the need to foresee the question?
+    \end{enumerate}
+  \end{quote}

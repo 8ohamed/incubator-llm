@@ -1,0 +1,56 @@
+  \section{Conclusion}
+  \label{sec:conclusion}
+
+  This project added a natural-language advisory layer to an existing DT, the incubator
+  of Gomes et al.\ \cite{gomes2025incubator}, without changing how the twin computes. The layer is
+  two skills over tools that drive the twin's own models, and it answers questions about opening
+  the lid and heating the box first. The research question asked what to do when the twin is asked
+  something no tool answers directly, such as how long the lid may stay open: code the search as a
+  new tool, or delegate it to the LLM over the existing tools.
+
+  For this twin the answer is to delegate first and code what recurs. With skills that describe the
+  kind of question, the model reached the reference on every inverse question, as a coded search
+  did, again in all but one of nine repeats of each and in every run of two questions written after
+  the skills, and invented no value where none could be given.
+  Delegating took time of the same order, but cost 194 to 473 thousand input tokens, or US\$0.25
+  to 0.42 at list prices, per answer, and up to US\$0.59 on a search over two inputs, gave up the guard at the simulation's resolution that the
+  coded search applies by rule, and labelled its search late. With skills that ruled the search
+  out, the model asked back, declined or mostly stopped short of the limit. Without skills it
+  searched at once and mostly reached the reference, but went past the twin, naming a room
+  temperature computed on states the twin never published. A search is therefore worth coding when its question
+  recurs, must clear the resolution or must give the same answer by construction, and is otherwise
+  better left to the model.
+
+  The project makes four contributions:
+
+  \begin{itemize}
+    \item An advisory layer for an existing twin made only of skills and wrapper tools, with the
+      twin's code unchanged, and extended once, by the heater boost, without changing the first
+      advisory (\Cref{sec:system}).
+    \item An evaluation that scores a language layer against references computed by the same tools
+      it calls, with a raw and a guarded answer at the simulation's resolution, and with a coded
+      search as the baseline for cost (\Cref{sec:method}).
+    \item A measured comparison of delegating and coding the same searches, in closeness, sources,
+      tokens, time and what had to be foreseen (\Cref{sec:results}).
+    \item A rule for when to code and when to delegate, four ways in which the skills limit or free
+      the model, and five steps for applying the approach to another twin
+      (\Cref{sec:discussion}).
+  \end{itemize}
+
+  Four directions follow from the results. The split proposed in \Cref{sec:build-or-ask}, where the
+  model formulates a question, a coded method searches and the twin judges, could keep the
+  model's flexibility and the guarantees of code, and should be built and compared with the two
+  ways tested here. Questions delegated often could then be promoted to coded tools over the
+  twin's unchanged models, starting from the model's own scripts and accepted once they pass tests
+  against references, so that what the twin can answer evolves from the questions it is asked
+  rather than only from those foreseen. The
+  lid-opening tool should report its resolution and its skill ask for the
+  guard, to test whether one stated line closes the gap at the resolution. And the comparison needs
+  wider evidence: other twins and models, more searches over several inputs and more questions
+  written after the skills than U1 and U2 provide, several scored runs per question and a second
+  rater. Two further directions concern the
+  twin rather than the layer: checking the open-lid disturbance against the recorded openings, and
+  modelling the batch's own heat, which would change the references but not the method.
+
+  An LLM can let a twin answer questions no one coded for, provided its skills allow the
+  search and leave the judgement to the twin.

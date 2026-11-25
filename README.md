@@ -15,6 +15,10 @@ pip install -r requirements.txt
 
 ## Use
 
+`.claude/skills/` holds two versions of the skills, the original and the improved. Keep only one
+version there per session; [`.claude/skills/README.md`](.claude/skills/README.md) says which
+folders to move out for each.
+
 Open Claude Code in this folder and ask, for example:
 
 > I want to open the lid for 5 minutes. Is that safe?

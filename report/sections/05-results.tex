@@ -1,0 +1,216 @@
+  \section{Results}
+  \label{sec:results}
+
+  All fourteen questions were run once with the original skills under the protocol of
+  \Cref{sec:runs}, and the control, inverse and no-feasible-answer questions once more with the
+  improved skills, with the same model and scored by the rules of \Cref{sec:metrics}. The inverse
+  and no-feasible-answer questions were run once more without skills (\Cref{sec:baseline}). The
+  coded search answered the inverse questions and N1. \Cref{app:answers} gives, verbatim, the scored
+  answer to every question with the original skills and to the inverse and no-feasible-answer
+  questions with the improved skills and without skills. Two runs departed from the protocol. I6
+  received the fixed reply twice instead of once, its reply to the first is scored, and it
+  declines, as does its reply to the second. O3 received the fixed reply although it had asked
+  nothing back, and its first answer is scored. Neither was rerun, since a new run would draw a
+  new answer rather than repeat the old one. N1 was run again because its first attempt received the fixed reply only after the
+  state had been switched to another scenario's.
+
+  \subsection{Closeness to the reference}
+  \label{sec:results-closeness}
+
+  \begin{table}[H]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}cllllll@{}}
+      \toprule
+      \textbf{ID} & \textbf{Reference} & \textbf{No skills} & \textbf{Original skills}
+        & \textbf{Improved skills} & \textbf{Coded search} \\
+      \midrule
+      I1 & 253 s (250 s)    & 240 s                   & 120 s              & 253 s            & 253 s (250 s) \\
+      I2 & 245 s (242 s)    & 240 s                   & 240 s              & 245 s            & 245 s (242 s) \\
+      I3 & none within 6 h  & none within 6 h$^{a}$   & none up to 2 h     & none within 6 h  & none within 6 h \\
+      I4 & 512 s            & 0 s                     & 0 s                & 533 s, tied      & 521 s, tied \\
+      I5 & 28800 s          & 28800 s                 & 28800 s            & 28800 s          & 28800 s \\
+      I6 & 310 s            & 310 s                   & declined           & 310 s            & 310 s \\
+      N1 & none in the hour & none                    & none, not searched & none             & none \\
+      \bottomrule
+    \end{tabular}
+    \caption{Answers to the inverse questions and N1, guarded values in brackets. Tied: as good as
+    the best, to the tools' resolution. $^{a}$Led by a 25-minute limit of its own.}
+    \label{tab:results-closeness}
+  \end{table}
+
+  Every answer given has the reference's verdict (\Cref{tab:results-closeness}). The original
+  skills' answers are only as fine as the values they tried. I1 and I2 fall 133 s and 5 s short
+  of the reference, on the safe side, and so meet the guarded reference, I3 tested openings only up
+  to two hours of the tool's six, and I5 is exact. I4 chose to open now and said that timing makes
+  little difference, which agrees with the reference: every start time is recoverable, with 336.6
+  to 360.9 s below the band. But opening now gives 347.7 s, 11.1 s more than the best and outside
+  the 3.1 s resolution. It read the window as one the opening must end within and tried starts up
+  to 300 s only, and is scored against the reference as fixed before the runs. I6 declined.
+
+  The improved skills reach the reference on every question, I1, I2, I5 and I6 to the second.
+  I1 and I2 now clear their budgets by only 0.3 s, inside the resolution, so unlike the original
+  answers they miss the guarded reference. The nine repeats of each inverse question reached the
+  reference in all but one run. All ten runs of I1, I2, I3, I5 and I6 gave the same value. Of
+  I4's, one gave 529 s instead of 533 s, as good as the best, and one read the window as the
+  original skills did and named 16 s, 7.8 s longer below the band than the best and outside the
+  resolution. I1 and I2 missed the guarded reference in all their runs. The coded search reaches the reference on every question, raw and guarded, and the shape it assumed for each answer held. As
+  a baseline, each control question returned every value in its expected answer from a single tool
+  call, with both versions of the skills.
+
+  Without skills the model asked nothing back and searched at once, through the commands and its
+  own scripts. It reached the reference on I5, I6 and N1, found the limits of I1 and I2 but advised
+  240 s for both, so met the guarded reference, and read I4's window as the original skills did.
+  On I3 it found no limit within the tool's range but led with a limit of its own, 25 minutes,
+  taken from a heater limit that the lid-opening tool does not apply.
+
+  \subsection{Where the answers came from}
+  \label{sec:results-provenance}
+
+  With both versions of the skills, every number in an answer that loaded a skill traces to a tool
+  run, except in the improved I2, which gives its script's own margin of 0.3 s and rounds its
+  answer to ``a little under 4 minutes'', both unlabelled. F3 adds, with both versions, one
+  unlabelled claim that paraphrases its skill. A searched value always traces to a call, but that
+  it is the longest, earliest or best is the layer's own step. With the original skills I1 and I2
+  say so in the same sentence and I3 in the next, I4 and I5 only in their last paragraph. With the
+  improved skills only I3 and I6 say so within a sentence, although the skill asks for it, and
+  I1, I2, I4, I5 and N1 say so later in the answer. The label varied between runs where the
+  answer did not: I1, I3 and I4 gave it within a sentence in some of their runs and not in others.
+
+  Outside the twin, asked with the original skills only, O3 keeps the tool's verdict apart from
+  taste and makes no claim about it. O1 and O2, which loaded no skill, hold all the unlabelled
+  material. O1 computes when the batch will be ready, three numbers not from the twin, makes eight
+  general claims about readiness, storage and eating, none labelled, and never says that the twin
+  cannot answer. O2 leaves seven numbers it computed itself, a table of heater duty against room
+  temperature, and three general claims unlabelled, and says there is no room forecast but not that
+  the tools hold the room constant.
+
+  No answer to N1 or N2 invents a value. With both versions, N2 says that the tool holds the room
+  at its measured 22.4 \si{\celsius} and cannot try another, so any temperature would be the
+  layer's own guess, and gives none. With the original skills N1 checked only an opening now, with
+  and without a heater boost, and said ``The tools can't search for a better time within the
+  hour'', crediting to the tools' limits a search it chose not to make. With the improved skills it
+  scanned the hour every five minutes, confirmed the best start with the command and called the
+  scan its own.
+
+  Without skills the answers went past the tools. N2 ran the tools' functions on states it built
+  itself, with the room at 22.0 to 30.5 \si{\celsius}, and opened with ``about 26 \si{\celsius}
+  or warmer'' before saying how it got there. It also called the high-risk verdict above
+  29 \si{\celsius} ``a quirk of the model, not a real risk''. Five of the eight answers left
+  numbers of the layer's own arithmetic unlabelled, I1 credited the twin with the longest safe
+  opening it had searched for itself, and only I4 labelled its search within a sentence.
+
+  \subsection{What each way cost}
+  \label{sec:results-cost}
+
+  \begin{table}[H]
+    \centering
+    \small
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{@{}crrrrrrrrrr@{}}
+      \toprule
+      & \multicolumn{3}{c}{\textbf{Tool runs}} & \multicolumn{3}{c}{\textbf{Active time (s)}}
+        & \multicolumn{2}{c}{\textbf{Input tokens (k)}} & \multicolumn{2}{c}{\textbf{Price (US\$)}} \\
+      \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-9} \cmidrule(l){10-11}
+      \textbf{ID} & orig. & impr. & coded & orig. & impr. & coded & orig. & impr. & orig. & impr. \\
+      \midrule
+      I1 & 14 & 14  & 14 & 89  & 139 & 92   & 261 & 361 & 0.22 & 0.33 \\
+      I2 & 20 & 14  & 14 & 121 & 133 & 89   & 309 & 303 & 0.25 & 0.29 \\
+      I3 & 17 & 6   & 10 & 105 & 142 & 112  & 263 & 194 & 0.23 & 0.25 \\
+      I4 & 12 & 124 & 39 & 73  & 292 & 238  & 217 & 401 & 0.20 & 0.34 \\
+      I5 & 23 & 15  & 25 & 705 & 394 & 1082 & 322 & 473 & 0.28 & 0.39 \\
+      I6 & 0  & 29  & 12 & 19  & 664 & 185  & 172 & 433 & 0.16 & 0.42 \\
+      N1 & 2  & 15  & 8  & 100 & 126 & 40   & 283 & 347 & 0.26 & 0.30 \\
+      \bottomrule
+    \end{tabular}
+    \caption{What each answer cost, with the original skills, the improved skills and the coded
+    search, which uses no tokens. Active time leaves out any wait for the fixed reply. Price is
+    that of the answer's tokens at the model's list prices.}
+    \label{tab:results-cost}
+  \end{table}
+
+  The three ways differ most in accuracy at the simulation's resolution
+  (\Cref{tab:results-closeness}). The coded search returns the guarded answer beside the raw one,
+  the improved skills went to the raw limit, and the original skills mostly stopped short of it.
+
+  They also searched differently (\Cref{tab:results-cost}). The original skills asked back before
+  five of the six inverse questions, saying that a limit found by trying values would be the
+  layer's own judgement rather than the twin's. After the fixed reply four searched, on grids
+  they chose, I1 stopping after seven durations from 1 to 30 minutes, and I6 declined again.
+  The improved skills asked nothing back and searched with their own scripts over the tool. I4 ran
+  124 simulations where the coded search needed 39. I5 read the phase boundaries from the twin's
+  domain knowledge, included the seconds either side of the change in its first scan and ran its
+  simulations in parallel, as I4 and I6 did, so it finished in 394 s against the 1082 s of the
+  coded search, which runs one simulation at a time and assumed nothing about where the change
+  lies.
+
+  Time per answer is therefore of the same order for all three, from under a minute to 18
+  minutes. Tokens are the cost of delegating: 194 to 473 thousand input tokens per inverse answer
+  with the improved skills, against 130 to 138 thousand for a control question, roughly what a
+  coded search reached through a skill in one call would cost. In price the gap is smaller, US\$0.25
+  to 0.42 against US\$0.16 to 0.20, since most input tokens are read from the cache at a twentieth
+  of the full rate. Output tokens, 1.5 to 4.1 thousand per answer, are 12 to 20\% of the price.
+  Spread over the five of seven answers that also met the guarded reference, the improved skills'
+  price is US\$0.46 per answer, against no tokens for the coded search. What had
+  to be written in advance differs as designed (\Cref{sec:method}). The coded search has an entry
+  for each of its seven questions, fixing the input to vary, the range, the passing verdicts and
+  the deciding budget, over three search methods. The improved skills add one section to each
+  skill, 60 and 53 lines long, that names no question, and the original skills, which gave five of
+  the six inverse answers with the reference's verdict, describe no search at all.
+
+  \subsection{Two unseen questions}
+  \label{sec:results-unseen}
+
+  The improved skills were written after the original answers had been read (\Cref{sec:improved}).
+  To test them on questions they were not shaped by, the supervisor wrote two more in scenario B,
+  and the skills were run on them unchanged, three times each. U1 asks when to open the lid within
+  the next 30 minutes, and for how long, to keep it open longest while the batch stays safe, a
+  search over two inputs. U2 asks for the longest safe opening if the lid opens at 8, 9, 10, 11 or
+  12 minutes, one duration that must pass at all five. The readings, safe as A and the 30 minutes
+  as the time the lid opens, and the scoring of \Cref{sec:metrics} were fixed before any run. The
+  reference ran every opening second from 0 to 1800 s for U1 and every duration at U2's five
+  times, 21\,287 simulations in all. The coded search answered both by combining its methods
+  (\Cref{sec:coded}) without a new one: for U1 the best opening time, each judged by its longest
+  duration, and for U2 the longest duration at the first time, checked at each further one.
+  \Cref{app:answers} gives the first answer to each.
+
+  \begin{table}[H]
+    \centering
+    \small
+    \setlength{\tabcolsep}{4pt}
+    \resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{%
+    \begin{tabular}{@{}clllrrrrr@{}}
+      \toprule
+      & & & & \multicolumn{2}{c}{\textbf{Simulations}} & \multicolumn{2}{c}{\textbf{Time (min)}}
+        & \textbf{Tokens (k)} \\
+      \cmidrule(lr){5-6} \cmidrule(lr){7-8} \cmidrule(l){9-9}
+      \textbf{ID} & \textbf{Reference} & \textbf{Improved skills} & \textbf{Coded search}
+        & impr. & coded & impr. & coded & impr. \\
+      \midrule
+      U1 & 264 s at 530 s (260 s) & 264 s at 530 s & 264 s at 530 s (260 s)
+        & 713--2321 & 733 & 22--70 & 36 & 450--836 \\
+      U2 & 253 s (250 s) & 253 s & 253 s (250 s) & 47--235 & 44 & 3--13 & 2 & 227--247 \\
+      \bottomrule
+    \end{tabular}}
+    \caption{The unseen questions, with the improved skills in all three runs, guarded values in
+    brackets. Ranges are over the three runs. Tokens are input tokens.}
+    \label{tab:results-unseen}
+  \end{table}
+
+  All three runs of each question reached the reference to the second, and those of U1 also named
+  the only other opening time that reaches 264 s, 1286 s (\Cref{tab:results-unseen}). As on I1 and
+  I2, every answer sat at the raw limit, 297.0 s below the band against a budget of 300 s, a margin
+  of 3.0 s inside the 3.1 s resolution, so none met the guarded reference. One run of U2 also
+  advised stopping at 4 minutes, a guard of its own that it left unlabelled. Every value that
+  answers a question came from a run, but no run labelled its search within a sentence, and two
+  misdescribed it, one giving about 750 simulations where it ran 872, the other saying it tried
+  every opening time where it tried one every 30 s.
+
+  U2 cost US\$0.21 to 0.29 per answer, and the coded search needed fewer simulations than every
+  run. U1 cost US\$0.48 to 0.59 and 22 to 70 minutes, with 713 to 2321 simulations against the
+  coded search's 733, over 11 to 19 model calls, some only to check on scripts the model had left
+  running. Its longest run spent 46 minutes confirming that no other opening second reaches
+  264 s. These sessions loaded fewer of the assistant's own instructions than those of
+  \Cref{tab:results-cost}, about 13 thousand tokens fewer per turn, so their tokens are not
+  compared with that table.

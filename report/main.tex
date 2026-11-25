@@ -1,0 +1,155 @@
+  \documentclass[12pt,a4paper]{article}
+
+
+  \usepackage[a4paper,margin=2.5cm]{geometry}
+  \usepackage[utf8]{inputenc}
+  \usepackage[T1]{fontenc}
+  \usepackage{microtype}
+  \usepackage{setspace}
+  \setlength{\parindent}{0pt}
+  \onehalfspacing
+
+  % --- Content packages -------------------------------------------------------
+  \usepackage{graphicx}
+  \usepackage{amsmath,amssymb}
+  \usepackage{booktabs}
+  \usepackage{float}
+  \usepackage{siunitx}
+  \usepackage{enumitem}
+  \usepackage{xcolor}
+  \newcommand{\tbd}[1]{\textcolor{red}{[#1]}} % placeholder for a value or decision not yet in
+  \usepackage{listings}
+  \lstset{
+    language=Python,
+    basicstyle=\footnotesize\ttfamily,
+    keywordstyle=\bfseries,
+    commentstyle=\itshape\color{black!55},
+    stringstyle=\color{black!70},
+    frame=single,
+    rulecolor=\color{black!25},
+    framesep=5pt,
+    xleftmargin=6pt,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    breaklines=true,
+    captionpos=b,
+    aboveskip=1.2em,
+    belowskip=1.2em,
+  }
+  \usepackage{tikz}
+  \usetikzlibrary{positioning,arrows.meta,calc}
+
+  % --- Citations --------------------------------------------------------------
+  \usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+  \addbibresource{references.bib}
+
+  % --- Links, loaded last so it wins on options ---------------------------------
+  \usepackage[colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+  \usepackage{cleveref}
+
+  \title{A Large Language Model Advisory Layer for an Existing Digital Twin:\\
+        \large A Tempeh Incubator Case Study}
+  \author{Mohamed Abdulkarim \\ Computer Engineering, Aarhus University\\[0.6em]
+        \normalsize Supervisor: Cláudio Gomes}
+  \date{\today}
+
+  \begin{document}
+  \pagenumbering{Roman}
+
+  \begin{titlepage}
+      \thispagestyle{empty}
+
+      \begin{center}
+          \vspace*{\fill}
+
+          % University and department
+          {\large\scshape Aarhus University\par}
+          \vspace{0.3cm}
+          {\normalsize Computer Engineering\par}
+
+          \vspace{1.8cm}
+
+          % Decorative accent
+          \rule{0.22\textwidth}{1.2pt}
+
+          \vspace{0.9cm}
+
+          % Main title
+          {\LARGE\bfseries
+          A Large Language Model\\[0.25cm]
+          Advisory Layer for an Existing\\[0.25cm]
+          Digital Twin\par}
+
+          \vspace{0.6cm}
+
+          % Subtitle
+          {\Large\itshape
+          A Tempeh Incubator Case Study\par}
+
+          \vspace{1.8cm}
+
+          % Author
+          {\large Mohamed Abdulkarim\par}
+
+          \vspace{0.4cm}
+
+          {\normalsize
+          Computer Engineering\par}
+
+          \vspace{1.2cm}
+
+          % Supervisor
+          {\normalsize\textcolor{black!65}{Supervisor}\par}
+          \vspace{0.15cm}
+          {\large Cláudio Gomes\par}
+
+          \vspace{1.5cm}
+
+          % Date
+          {\normalsize\today\par}
+
+          \vspace*{\fill}
+      \end{center}
+  \end{titlepage}
+
+  % --------------------------------------------------
+  % TABLE OF CONTENTS — Roman numbering
+  % --------------------------------------------------
+  \tableofcontents
+
+  \newpage
+
+  % --------------------------------------------------
+  % MAIN TEXT — Arabic numbering starts at 1
+  % --------------------------------------------------
+  \pagenumbering{arabic}
+
+
+  \input{sections/01-introduction}
+
+  \input{sections/02-related-work}
+
+  \newpage
+  \input{sections/03-system}
+
+  \newpage
+  \input{sections/04-method}
+
+  \input{sections/05-results}
+
+  \input{sections/06-discussion}
+
+  \input{sections/07-conclusion}
+
+  \newpage
+  \printbibliography
+
+  % =====================================================================================
+  \newpage
+  \appendix
+  \input{sections/A-answers}
+
+  \input{sections/B-skills}
+
+  \end{document}

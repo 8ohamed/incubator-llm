@@ -1,0 +1,230 @@
+  \section{System}
+  \label{sec:system}
+
+  \subsection{The sources}
+  \label{sec:sources}
+
+  Building the advisory starts at the bottom of \Cref{fig:architecture}, with the three sources
+  every later number is drawn from (\Cref{tab:sources}). They fix what the layers above can say,
+  and each can be trusted to a different degree.
+
+  \begin{table}[htbp]
+      \centering
+      \begin{tabular}{@{}lll@{}}
+      \toprule
+      \textbf{Source} & \textbf{Provides} & \textbf{Standing} \\
+      \midrule
+      DT models & thermal and control behaviour & calibrated against the box \\
+      Domain knowledge & tempeh and heater limits & sourced or estimated \\
+      Current state & the running batch's condition & as published by the twin \\
+      \bottomrule
+      \end{tabular}
+      \caption{Three sources, what each contributes, and where its authority comes from.}
+      \label{tab:sources}
+  \end{table}
+
+  \textbf{The DT's models.} Four modules are taken from the twin: two plants, one
+  carrying the air temperature and the box's heat loss and one adding the heater element, the
+  controller's switching logic, and the wrapper that makes that logic a model the solver can run
+  \cite{gomes2025incubator}. They are used exactly as the twin defines them. Their calibrated
+  parameters arrive with the current state rather than being written into this code, so a
+  recalibration on the twin's side reaches the advisory with nothing here edited.
+
+  The parameters were fitted
+  with the box empty and the lid closed, and room temperature is held constant over the horizon.
+
+  \textbf{The current state.} A single document stands in for what the twin publishes about the
+  running batch: sensor readings, actuator settings, the filtered estimate of the box's
+  temperature, the controller's settings, the calibrated model parameters, the open-lid parameters,
+  and how far the batch has progressed. It is the only source that changes between one question
+  and the next.
+
+  \textbf{Domain knowledge.} One document holds what the twin does not (\Cref{tab:domain}). The
+  temperature values follow the tempeh literature
+  \cite{steinkraus1960tempeh,tempehinfo_temperature}, the bands, budgets and heater limits are
+  reasoned values adopted for this system and marked as estimated. None has been calibrated
+  against a batch that actually spoiled.
+
+  \begin{table}[htbp]
+    \centering
+    \begin{tabular}{@{}llc@{}}
+      \toprule
+      \textbf{Entry} & \textbf{Value} & \textbf{Basis} \\
+      \midrule
+      \multicolumn{3}{@{}l}{\textit{Fermentation phases, over a 24 hour batch}} \\
+      \quad Lag            & 0 to 11 h, cold tolerance $\times 0.5$  & sourced \\
+      \quad Active growth  & 11 to 21 h, $\times 1.75$               & sourced \\
+      \quad Maturation     & 21 to 24 h, $\times 1.15$               & sourced \\
+      \midrule
+      \multicolumn{3}{@{}l}{\textit{Culture temperature bounds}} \\
+      \quad Optimal range  & 30 to 37 \si{\celsius}, best near 34.5  & sourced \\
+      \quad Growth limits  & 22 to 41 \si{\celsius}                  & sourced \\
+      \quad Damage ceiling & 42 \si{\celsius}                        & sourced \\
+      \midrule
+      \multicolumn{3}{@{}l}{\textit{Safe air band, by phase}} \\
+      \quad Lag            & 27 to 35 \si{\celsius}                  & estimated \\
+      \quad Active growth  & 23 to 39 \si{\celsius}                  & estimated \\
+      \quad Maturation     & 25 to 37 \si{\celsius}                  & estimated \\
+      \midrule
+      \multicolumn{3}{@{}l}{\textit{Time a batch may spend below its band}} \\
+      \quad Still safe     & 600 s                                   & estimated \\
+      \quad Recoverable    & 900 s                                   & estimated \\
+      \midrule
+      \multicolumn{3}{@{}l}{\textit{Heater limits}} \\
+      \quad Element ceiling      & 60 \si{\celsius}                  & estimated \\
+      \quad Longest run, then rest & 1800 s, then 300 s              & estimated \\
+      \quad Share of any hour on & 0.75                              & estimated \\
+      \bottomrule
+    \end{tabular}
+    \caption{Domain knowledge overview.}
+    \label{tab:domain}
+  \end{table}
+
+
+
+  \subsection{Tool helpers}
+  \label{sec:helpers}
+
+  Two small modules stand between the sources and the simulation. Neither decides anything. They
+  make the sources available in a form the simulation can use.
+
+  \textbf{Reading the state.} The first opens the state document and validates it. It is the only
+  place that document is read, so a state that is malformed, incomplete or internally inconsistent
+  fails here with a clear message rather than reaching a simulation and producing a plausible
+  wrong answer.
+
+  \textbf{Reading the domain knowledge.} The second loads the thresholds in \Cref{tab:domain} and
+  answers two questions: which phase of fermentation the batch has reached, derived from how long
+  it has been running since an incubator has no sensor for it, and which temperature band counts
+  as safe in that phase. Both are needed before a trajectory means anything, which is why they are
+  settled here rather than downstream.
+
+  \subsection{The simulation tool}
+  \label{sec:simulation}
+
+  The simulation is the capability the language layer uses to answer a what-if question about the
+  lid: given an opening, it predicts what the box will do, starting from the state it is in now.
+
+  \textbf{Inputs.} The language layer supplies only the opening: how long the lid stays open and
+  when it opens, by default immediately. Everything else is read from the current state, including
+  the starting temperatures, the room temperature, the controller settings, the calibrated
+  parameters and the open-lid disturbance. The skills have the language layer choose which opening
+  to simulate, not the conditions it starts from, although the tool can be pointed at another
+  state file, a route \Cref{sec:runs} returns to. An opening of zero length gives the undisturbed baseline,
+  so the same tool also answers what happens if the lid stays shut. A negative duration, an opening
+  longer than six hours or a state that fails validation is refused with a plain message, and
+  nothing is replaced by a default.
+
+  \textbf{What it does.} It runs the twin's own plant and controller together in closed loop
+  \cite{gomes2025incubator}, so the heater reacts to the opening as it would on the box. An open
+  lid is represented by multiplying the box's heat-loss coefficient, for as long as the lid is
+  open, by a ratio taken from the twin's more detailed calibration. The twin declares that
+  coefficient as an input rather than a fixed parameter, so supplying a value that changes over
+  time is ordinary use of its interface, and none of its equations, parameters or code is changed.
+  The run continues for an hour after the lid closes, long enough to observe recovery.
+
+  \textbf{What it returns.} A result has three parts. The summary holds the numbers an answer is
+  built from: the lowest air temperature and when it occurs, the total drop, the peak heater
+  temperature, the time to recover, and the time spent outside the safe band. The trajectory is
+  thinned to about a hundred points, which is the reduction step described in
+  \Cref{sec:related-dt}, every number is still computed on the full solver grid. The inputs record
+  lists what was actually used, including the fermentation phase and the safe band that applied.
+  The tool computes and does not interpret: whether any of this is acceptable for the batch is
+  decided by the risk assessment (\Cref{sec:analysis}).
+
+  \textbf{Why this suits the language layer.} Three properties make the tool usable by a model
+  that must not compute on its own:
+
+  \begin{itemize}
+    \item \textbf{It is phrased in the operator's terms.} A duration and a start time are all a call
+      needs, so turning a question into a call requires no knowledge of thermal parameters. This
+      removes the first obstacle in \Cref{sec:gap}.
+    \item \textbf{Every number carries its assumptions.} Because the inputs record is part of the
+      result, an explanation can state what a prediction rests on, such as the phase the batch was
+      judged to be in, without the model reconstructing it.
+    \item \textbf{It follows the twin.} Parameters and controller settings arrive with the state, so
+      after the twin recalibrates or re-tunes its controller (\Cref{sec:incubator-dt}), the next
+      prediction uses the new values with nothing here changed. And because an opening is only a
+      duration and a start time, a question can be explored by comparison, such as opening now
+      against opening later, the same pattern of repeated calls the heater-boost advisory builds
+      on (\Cref{sec:architecture}).
+  \end{itemize}
+
+  % These three properties are what the discussion (sec:flexibility) tests.
+
+  \subsection{The risk assessment}
+  \label{sec:analysis}
+
+  The risk assessment turns the simulation's numbers into a verdict about the batch, using rules in
+  ordinary code so that the thresholds behind a verdict are stated rather than inferred. From the
+  batch's age when the lid opens it takes the phase, so a later opening is judged in the phase it
+  falls in, and from \Cref{tab:domain} that phase's safe air band,
+  its cold tolerance, and the two exposure budgets that the tolerance scales, so a young batch is
+  treated as less forgiving than one generating its own heat.
+
+  Time below the band within the first budget is safe, between the two budgets recoverable, and
+  beyond the second high risk, time above the band but under the damage ceiling of
+  42 \si{\celsius} turns an otherwise safe verdict into recoverable. Air above the ceiling, which
+  an open lid cannot cause but the heater boost could, and a run that never returns to the
+  setpoint are both high risk, the second because recovery cannot be confirmed, not because harm
+  was shown.
+
+  A recoverable verdict, the only one where what the operator does next changes the outcome, comes
+  with the time the lid must then stay shut. Every verdict carries the number that decided it and
+  the limits it inherits from the models and thresholds behind it (\Cref{sec:sources}).
+
+  For example, a five-minute opening in active growth, with the air at 30.98 \si{\celsius} and
+  the room at 22.4 \si{\celsius}, is predicted to take the air down to 23.81 \si{\celsius}. That
+  stays inside the band, so the verdict is safe, but with a margin of only 0.8 \si{\celsius}.
+
+
+  \subsection{The lid-opening advisory}
+  \label{sec:skill}
+
+  The lid-opening advisory, like each advisory in the language layer of \Cref{fig:architecture},
+  is written as instructions rather than as code: a short document, a skill
+  (\Cref{sec:architecture}), loaded when a question is about opening the lid. It names the single
+  tool the advisory may call and fixes the order in which the work is done, so no orchestration
+  program of our own sits between the operator and the tool.
+
+  What the document fixes is how far the model's discretion reaches. The model may recognise that
+  a question concerns the lid, read the opening as a duration, and choose the words, it may not
+  fill in what the operator left out, and a question the tool will not accept returns to the
+  operator instead of being completed by the model. The rest is relayed: every number in an answer
+  must appear in the tool's output. The answer is short and in a fixed order: the verdict with the
+  reason that decided it, what happens to the air, and for a recoverable opening how long to keep
+  the lid shut. It ends by offering the limitations, the caveats and the standing of the thresholds
+  (\Cref{sec:sources}) are explained only when asked for, and then never softened.
+
+  \subsection{The heater-boost advisory}
+  \label{sec:boost}
+
+  When an opening is judged high risk, the operator can ask whether warming the box first would make
+  it acceptable. The only setting that can be changed on a running incubator is the controller's
+  setpoint, so a boost is a plan: raise the setpoint now, open the lid once the air has reached it,
+  and set it back when the lid closes. This is the twin's own example of heating ahead of a power
+  supply replacement (\Cref{sec:incubator-dt}), applied to the lid.
+
+  The tool tries whole degrees above the current setpoint, up to the top of the phase's safe band.
+  Each candidate is simulated as one continuous run, through the pre-heat, the opening and the
+  recovery, and judged by the unchanged risk assessment (\Cref{sec:analysis}), so a boosted opening
+  is measured and judged exactly as a plain one. A candidate is accepted if it is judged
+  recoverable or safe, stays within the heater limits of \Cref{tab:domain}, and clears the
+  exposure budget by more than the interval between the solver's samples, since a smaller margin
+  can flip with a fraction of a second more or less pre-heat. The tool returns the lowest accepted
+  setpoint as a plan, or the reason none exists.
+
+  In this model a boost achieves little. The air loses its extra heat within seconds of the lid
+  opening, so the gain comes only from heat stored in the heating element, which shortens recovery
+  once the lid is shut. In the lag phase with the room at 17.6 \si{\celsius}, for example, a
+  five-minute opening leaves the air below its band for 488.7 s against a budget of 450 s and is
+  high risk. A boost to 34 \si{\celsius}, with the lid opened after 351.0 s, brings this to
+  441.0 s and the verdict to recoverable. A boost to 33 \si{\celsius} is also judged recoverable,
+  but clears the budget by 3.0 s against a sample interval of 3.1 s and is rejected.
+
+  The advisory is a second skill, separate from the first, so it was added on top of the same
+  tools without changing the twin or the lid-opening advisory, how far this carries is discussed
+  in \Cref{sec:generality}. Its rules follow \Cref{sec:skill},
+  with two additions: the plan is passed on exactly as returned, together with how narrowly it
+  clears the budget, and when no boost works a shorter opening is suggested but not searched for,
+  since a search run by the model would be a numerical decision taken in the language layer.

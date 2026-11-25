@@ -1,0 +1,208 @@
+  \section{Discussion}
+  \label{sec:discussion}
+
+  The results answer the research question for one twin. This section draws out what they mean
+  beyond it, and where they stop.
+
+  \subsection{When to code and when to delegate}
+  \label{sec:build-or-ask}
+
+  Part (a) has a clear answer for this twin. Delegated with the improved skills, the model reached
+  the reference on every inverse question and on N1, as the coded search did, and again in all but
+  one of nine repeats of each inverse question, the exception a run of I4 that read the window as
+  the original skills did. It did so too in every run of two questions written after the skills,
+  one a search over two inputs (\Cref{sec:results-unseen}). With the
+  original skills, every answer it gave had the
+  reference's verdict, but was only as fine as the values it chose to try
+  (\Cref{tab:results-closeness}). No answer, with either version, invented a value where none
+  exists or the tools cannot give one, but without skills N2 did (\Cref{sec:results-provenance}). The improved skills called each searched value their own,
+  but in the same or the next sentence in only two of seven answers and in none of the six unseen
+  runs, and left unlabelled two numbers in I2 that no tool produced.
+
+  Part (b) turns first on what each way must know in advance. Coding needs the question foreseen:
+  the coded search has an entry for each, fixing the input to vary, the range, the passing verdicts
+  and the deciding budget, and each method assumes a shape for the answer, such as a single change
+  from failing to passing in I5. Each unseen question needed a new entry but no new method, since
+  both combine the existing ones. Delegating needs only the kind of question foreseen, in one
+  section per skill that names no question. Without that section the model either held back, under
+  the original skills, or with no skill searched but went past the tools (\Cref{sec:freedom}), so
+  this much is needed.
+
+  Time was of the same order: the coded search, running one simulation at a time, was faster on six
+  of the seven questions, by a factor of 1.2 to 3.6, and slower on I5, where the model ran
+  simulations in parallel (\Cref{tab:results-cost}). Delegating costs tokens instead, on every
+  answer: 194 to 473 thousand input tokens with the improved skills, US\$0.25 to 0.42 at list
+  prices, against the 130 to 138 thousand, US\$0.16 to 0.20, of a control question,
+  which a coded search reached through a skill would roughly match. They follow the model's turns
+  rather than its simulations, since a script runs many in one turn: I4 ran 124 simulations for
+  401 thousand tokens, I5 ran 15 for 473 thousand. The search over two inputs cost the most: U1
+  took up to 2321 simulations, 70 minutes and US\$0.59 per answer, against the coded search's 733
+  simulations and 36 minutes. Delegating also gives up what code does by rule. The coded search
+  reports a guarded answer beside the raw one, where the improved skills went to the raw limit,
+  clearing the budget on I1 and I2 by 0.3 s and on U1 and U2 by 3.0 s against a resolution of
+  3.1 s, and it leaves the model no search step to label.
+
+  This suggests a rule. A new or rare kind of question is best delegated, with its kind described
+  in the skill, since it is then answered when asked, close to the optimum, with no code written
+  for it. A search is worth coding when the question recurs, since a delegated answer pays its
+  tokens each time, when the answer must clear the resolution by a rule, or when it must be the
+  same every time by construction rather than by observation. I4's runs show the difference:
+  they named different seconds as good as the best, and one of ten read the question
+  differently and missed it. The heater-boost advisory is the
+  coded case: its setpoint search was foreseen, and its guard is part of the tool
+  (\Cref{sec:boost}).
+
+  The choice need not be all or nothing. The coded search's entries formulate each question, and
+  its three methods are generic. The model formulated every question as those entries do, since
+  every scored improved answer reached the reference, and fell short only where code is strong, at the
+  guard and the label. The work could be split as Guan et al.\ split planning, where the model
+  writes a formal model of the domain and a sound planner searches it \cite{guan2023worldmodels}:
+  the model formulates the question when it is asked, a coded method searches, and the twin judges
+  each candidate.
+
+  A question delegated often could also be promoted to a coded tool, starting from the model's own
+  script. What a twin can answer could then grow from use, while its models stay unchanged: the
+  questions operators ask show which capabilities are missing, the model answers them first by
+  combining the existing tools, and those that recur are coded as new tools over the same models
+  once they pass tests against references, as the coded search did here. The foresight that
+  coding needs would then come from the questions asked rather than in advance. This links the
+  layer to work that places evolution at the core of engineering DTs, with new services among its
+  triggers \cite{alskaif2025evolution}, and to the use of LLMs in modelling DTs
+  \cite{yang2025llmdtmodeling}. Neither this promotion nor the split above was tested here.
+
+  That the model searched well does not contradict Valmeekam et al., who find that LLMs
+  plan poorly \cite{valmeekam2023planbench}. Each search here is over a single input, and the
+  model searched by writing scripts that ran the tools, as program-aided models compute in an
+  interpreter \cite{gao2023pal}, choosing new values from earlier results as a model used as an
+  optimiser does \cite{yang2024opro}. Xia et al.\ showed such a search in a case study
+  \cite{xia2024llmsimulation}, and this work measures one against a reference and a coded search.
+
+  \subsection{Freedom and boundaries in the skills}
+  \label{sec:freedom}
+
+  The two versions of the skills differ only in one section per skill and a few lines around it
+  (\Cref{app:skills}), yet that difference decided most of the closeness results, for 40\% more
+  input tokens on the inverse questions. Choosing what a model is given to read, in its
+  instructions and everything else in its context, is now called context engineering
+  \cite{mei2025contextsurvey,anthropic2025contextengineering}. In a layer made only of skills, it
+  decides how much of the model's ability reaches the twin, through four mechanisms seen in the
+  runs.
+
+  \textbf{A boundary is read more widely than it was meant.} The original skills state that the
+  model computes and judges nothing itself, that the lid-opening advisory does not search for the
+  best moment and that the heater-boost advisory does not look for the longest opening, lines meant
+  to keep numerical decisions in the tools. The model mostly read them as ruling out a search: it
+  asked back before five of the six inverse questions, declined I6 twice, and in N1 told the
+  operator that the tools could not search the hour, presenting the skill's limit as the twin's.
+  Context outside the skill moved the same line. In a run of I1 set aside because the assistant
+  had also loaded the project's own instructions, which asked whether the layer could answer by
+  searching over the tools, it searched at once and reached 253 s, against the scored run's 120 s,
+  as did a run with only those instructions added. Both are single runs, observations rather than
+  results.
+
+  \textbf{A restricted search stops early.} After the fixed reply the original skills searched on
+  grids they chose and reported the best value they had tried, I1 stopping at 120 s after seven
+  durations. Without skills no objective was stated either, yet the model refined its search
+  unasked, to 252 s on I1 on a 3-second grid and to the limit of 245 s on I2. The coarse searches
+  therefore more likely came from the original skills' restrictions than from the missing
+  objective. The improved skills lift the restrictions and state the objective, the largest or
+  smallest passing value over the whole range and to the second, and reached it on every question.
+
+  \textbf{The objective stated is the one obtained.} ``To the second'' put I1, I2, U1 and U2 at
+  the raw limit in all of their runs, inside the resolution. The heater-boost tool reports its
+  resolution and guards against it, but the lid-opening tool reports none and its skill asks for
+  no guard. In the scored run of I2 the model noticed the 0.3 s margin and advised
+  staying ``a little under 4 minutes'', a guard of its own that no tool produced and that its
+  repeats did not all give. One run of U2 likewise advised stopping at 4 minutes. Without skills, asked for no precision, the model advised 240 s on both
+  I1 and I2, below the limits it had found, and so met the guarded reference. An objective given
+  to a model must include the accuracy the twin supports, not only the precision the operator
+  acts in.
+
+  \textbf{Without a boundary the search runs past the twin.} Without skills the model searched at
+  once on every question, so what the improved skills supply is not the search but its boundary.
+  Without one, N2 answered with a room temperature computed on states the twin never
+  published and called a high-risk verdict a quirk of the model, and I3 led with a limit the
+  lid-opening tool does not apply. The original skills' boundary held the search back, no skill
+  let it run past the twin, and the improved skills' boundary allowed the one and stopped the
+  other.
+
+  These results show where the line in \Cref{fig:architecture} falls. The original skills drew it
+  tighter than the figure: the model computed nothing beyond unit conversion and took no numerical
+  decision, which is why the heater-boost advisory leaves a shorter opening unsearched
+  (\Cref{sec:boost}). The improved skills move one numerical decision into the language layer,
+  which value to run next, but not the judgement: apart from guards of the model's own in I2 and
+  in a run of U2, and one count of its own simulations in U1, every number and verdict reported
+  came from a run. The line worth drawing is therefore the figure's, that the
+  model orchestrates and only the twin predicts and judges, or as the improved skills put it,
+  ``Your mathematics chooses what to run; only a run judges it.'' This is the arrangement Kambhampati et
+  al.\ argue for in planning, an LLM paired with external model-based verifiers
+  \cite{kambhampati2024llmmodulo}, here with the twin as the verifier.
+
+  Mylonas et al.\ enforce such a line in code, rendering an answer's numbers from the tools, and
+  without that layer only 39.2\% of answers carried numbers the tools supported
+  \cite{mylonas2026governance}. Here, in a different setting, the skills' instructions alone kept
+  every number in the scored answers that loaded them to a tool output except I2's two and U1's
+  count of its own simulations, while O1
+  and O2, which loaded no skill, and five of the eight answers without skills left numbers and
+  claims of their own unlabelled. Instructions can carry the grounding, but only where they are
+  loaded and as far as they are followed, and the label on a searched value was followed in some
+  runs of a question and not in others. This argues for enforcing in code whatever must never
+  fail.
+
+  \subsection{Applying the approach to another twin}
+  \label{sec:generality}
+
+  Of the three layers in \Cref{fig:architecture}, the structure carries over and the content does
+  not. The rules that bind each skill, the split of prediction from judgement, and search as
+  repeated simulation do not depend on the incubator. The sources do, and so do the tool parts
+  that encode them: the open lid as a scaled heat-loss input, the phases and bands of tempeh, and
+  the heater limits. A new capability on the same twin costs a skill, a tool and, where needed,
+  new domain knowledge, as the heater boost showed by reusing the simulation and the risk
+  assessment unchanged and adding only the search (\Cref{sec:boost}). For a different twin, the
+  results suggest five steps.
+
+  \begin{enumerate}
+    \item \textbf{Check the twin.} Its model must run forward from outside with the disturbance as
+      an input, its current state must be published, and there must be limits to judge a
+      prediction against. Had the heat-loss coefficient been a fixed parameter, modelling the open
+      lid would have meant changing the twin's code, which this design rules out.
+    \item \textbf{Wrap one forward tool per disturbance,} taking inputs in the operator's terms and
+      returning a verdict with the numbers that decided it, its range and its resolution, which a
+      search and its guard need.
+    \item \textbf{Write one skill per advisory} that keeps every reported number to a tool output,
+      says what only the tools may judge rather than forbidding the model to compute, and
+      describes the search over the tool's inputs with the objective in full, any guard included,
+      and the label the search needs.
+    \item \textbf{Test the layer alone,} in a session that holds nothing else, against references
+      computed by the same tools. The set-aside runs (\Cref{sec:freedom}) also hid a defect in
+      both skills, a wrong folder to run the tools from, which the clean runs exposed.
+    \item \textbf{Delegate first and code what recurs} (\Cref{sec:build-or-ask}).
+  \end{enumerate}
+
+  One twin and one added capability show that the structure allows this reuse, not that it holds
+  in general.
+
+  \subsection{Limitations}
+  \label{sec:limitations}
+
+  The evidence is narrow: one twin, one model at one effort setting in one assistant, nine
+  searches, only U1's over two inputs, and one scored run per question. The nine repeats of each
+  inverse question were compared on their answers and labels only, and the original skills' handling of inverse questions changed with what else the
+  session held (\Cref{sec:freedom}), so their results describe the layer alone. Larger searches,
+  or other models, may differ, and with a slower simulation the number of runs, 124 by the model
+  on I4 against the coded search's 39 and up to 2321 on U1, would dominate the time.
+
+  Both sides of the comparison had some hindsight. The improved skills were written after the
+  original answers had been read, and their line on phase changes bears on I5
+  (\Cref{sec:improved}). The coded search was designed with the reference known, though its rules
+  were fixed before it ran. Only the original skills predate the question set, but on two
+  questions written after the improved skills, those skills, unchanged, reached the reference in
+  every run, as did a coded search designed without it (\Cref{sec:results-unseen}).
+
+  The costs are specific to the set-up. Some improved runs simulated in parallel and the coded
+  search did not, and all times depend on the machine, so only their order is compared. The input
+  tokens include the assistant's own instructions, sent with every turn, and would differ in
+  another assistant.
+
+  The author alone scored the answers, under rules fixed before the runs, with the numbers traced
+  by a script and the claims checked by hand.
