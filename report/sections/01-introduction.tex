@@ -57,7 +57,7 @@
   Consider an operator who wants to open the lid of a running batch for five minutes, and wants to
   know beforehand whether the batch can take it. The DT can answer this in principle. It has
   calibrated thermal models, a representation of the disturbance an open lid causes, and a
-  decision-support service meant for this kind of before-the-fact analysis, the power supply
+  decision-support service meant for this kind of before-the-fact analysis. The power supply
   example is structurally the same problem \cite{gomes2025incubator}. The gap is not a missing
   capability but the distance between that capability and the person who needs it:
 
@@ -82,7 +82,7 @@
   \label{sec:architecture}
 
   The advisory is organised as three ordered layers (\Cref{fig:architecture}). A layer may call the
-  one below it and never the one above, so a quantity reaches the operator only after something
+  one below it and never the one above, so a quantity is meant to reach the operator only after something
   below has computed it.
 
   \begin{figure}[!ht]
@@ -256,3 +256,6 @@
         resolution, tokens and time per answer, and the need to foresee the question?
     \end{enumerate}
   \end{quote}
+
+  The simulation resolves time only to about 3 s (\Cref{sec:simulation}), so an answer is accurate
+  at its resolution when it clears its limit by more than that.

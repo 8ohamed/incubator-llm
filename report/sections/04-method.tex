@@ -18,13 +18,13 @@
   \subsection{The question set}
   \label{sec:question-set}
   The first twelve questions, in three groups, were all written before any run
-  (\Cref{tab:questions}). The three control questions are ones the advisories were written for,
-  each answered by a single tool call. The six inverse questions are not: neither skill chooses
-  when to open, and the heater-boost skill states that it does not look for the longest opening,
-  so each needs a search over the tools. Three ask how long, two ask when, and one asks how long an
+  (\Cref{tab:questions}). The three control questions are forward questions (F) of the kind the advisories were written for,
+  each answered by a single tool call. The six inverse questions are not: each asks for a
+  duration or an opening time, which the tools take as input rather than return, so each needs a
+  search over the tools, and neither skill describes one. Three ask how long, two ask when, and one asks how long an
   opening a heater boost can make acceptable. One reaches past the tools: in scenario A no opening within the simulation's
   six-hour limit puts the batch at risk, so any longer limit has no tool behind it. Another needs a
-  long search: in scenario C no opening is acceptable until the batch enters active growth, hours
+  long search: in scenario C no ten-minute opening is acceptable until the batch enters active growth, hours
   later. The three questions outside the twin range from one unrelated to it to one that is half
   inside it. Two more were added after the twelve had been scored, each fixed with its reference and
   scoring before it was run. They have no feasible answer: in N1 no opening time in the hour avoids
@@ -64,8 +64,8 @@
                           now? \\
       \bottomrule
     \end{tabular}
-    \caption{The question set: control (F), inverse (I), outside the twin (O) and no feasible
-    answer (N).}
+    \caption{The question set: forward control questions (F), inverse (I), outside the twin (O)
+    and no feasible answer (N).}
     \label{tab:questions}
   \end{table}
 
@@ -100,7 +100,7 @@
 
   \textbf{Inverse questions.} The script calls the forward tool at every point of a grid over the
   input the question leaves open (\Cref{tab:reference}). The grid steps one second, since the
-  tools' figures change only in jumps of the solver's sample interval, about 3.1 s, I3 and I5 span
+  tools' figures change only in jumps of the solver's sample interval, about 3.1 s. I3 and I5 span
   hours and use coarser steps.
 
   \begin{table}[H]
@@ -129,20 +129,23 @@
   ``when'' the first passing value, and for I4 the opening time with the least time below the
   band. The \emph{raw} value takes each verdict as the tool gives it. The \emph{guarded} value also
   requires the deciding budget to be cleared by more than one sample interval, the heater-boost
-  tool's own rule (\Cref{sec:boost}), for I4 it is the set of opening times within one interval of
+  tool's own rule (\Cref{sec:boost}). For I4 it is the set of opening times within one interval of
   the best, scattered between 491 and 592 s.
 
   No verdict changed back along its grid. The I1 and I2 references clear their budgets by only
   0.3 s. In I4 every opening time is recoverable, with 336.6 to 360.9 s below the band, so timing
-  makes little difference. In I3 the air never leaves the band within the tool's six-hour limit.
+  makes little difference. In I3 the air never leaves the band within the tool's six-hour limit. The heater
+  holds it just above the band edge, and the opening is judged in active growth, the phase it
+  starts in (\Cref{sec:analysis}), even where it lasts past the start of maturation three hours
+  later.
   In I5 every opening is high risk until exactly eight hours from now, when the batch enters active
   growth and a ten-minute opening becomes safe. In I6 a boost rescues openings from 265 to 310 s.
 
-  \textbf{Other questions.} A control question's reference is its single tool call: F1 is safe,
-  with the air down to 23.81 \si{\celsius} against a band edge of 23 \si{\celsius}, F2 is
-  recoverable, 339.9 s below the band against 300 s, with the lid then kept shut for 240 s, F3 is
+  \textbf{Other questions.} A control question's reference is its single tool call. F1 is safe, the example of
+  \Cref{sec:analysis}. F2 is
+  recoverable, 339.9 s below the band against 300 s, with the lid then kept shut for 240 s. F3 is
   high risk without a boost and recoverable with the plan of \Cref{sec:boost}. A question outside
-  the twin has no reference value, a correct answer says which part the twin does not cover. Grid
+  the twin has no reference value, and a correct answer says which part the twin does not cover. Grid
   points on both sides of every change of verdict, and each control call, were rerun through the
   command lines and matched exactly.
 
@@ -150,35 +153,44 @@
   \label{sec:coded}
 
   The reference is itself a search coded over the tools, but an exhaustive one, with 601
-  simulations for most questions, which no one would ship. Part (b) needs what coding the search
-  would cost, so a second script answers the inverse questions and N1 as a coded tool would. It
+  simulations for most questions, which no one would ship. Part (b) needs the cost of coding the
+  search, so a second script answers the inverse questions and N1 as a coded tool would. It
   calls the same tool functions with the same rules for passing, and assumes the shape a designer
   would expect for each kind of question. For the longest duration the input doubles from 60 s
   until a run fails or the tool's six-hour limit passes, then the bracket is halved until the last
   passing and the first failing second are adjacent \cite{boyd2004convex}. The earliest time is
-  found the same way from opening now, over the question's range or a day when it gives none. For
+  found the same way, starting from opening now and searching the question's range, or a day if it
+  gives none. For
   the best time it runs every 60 s, then every 10 s and every second around the best so far. The
-  guarded answer is found from the runs already made. These rules were fixed before the script
+  guarded limit is then found by the same halving, starting from the runs already made. These rules were fixed before the script
   ran, with the reference already known, and not changed after. Each run is timed, one at a time
   in a single process, as a coded tool would run inside one command.
 
   \subsection{Running the questions}
   \label{sec:runs}
 
-  Each question is asked a new Claude Code session that holds the advisory
+  Each question is asked in a new Claude Code session that holds the advisory
   layer and nothing else of this project, running Claude Opus 5.5 \cite{anthropic2026opus55} at
   high effort, with the scenario's state as the twin's current state. The session is opened in a
   copy of the layer outside the project's repository, so the reference answers, earlier runs and
-  project notes lie outside its folder and no project instructions or memory are loaded, the
+  project notes lie outside its folder and no project instructions or memory are loaded. The
   transcripts confirm that no run loaded an instruction or memory file or read a file of the
   project outside its copy. No route to an answer is blocked. If the layer asks something back, it receives one reply fixed in advance, ``I have no
   more details. Please answer as best you can.'', and an answer that still asks back counts as
   declined. The full transcript of every scored run is kept.
 
+  A first set of runs of the twelve questions was set aside. Its copy sat inside the project's
+  repository, so the assistant loaded the project's own instructions, which stated the research
+  question, into every session. Those instructions also said where to run the tools from, and so
+  hid a defect in both skills, which named the wrong folder. The skills were corrected, and the
+  two clean runs made before the correction, F1 and F2, were run again. One more run of I1 added
+  only those instructions to the clean copy. These runs are single observations, used in the
+  Discussion (\Cref{sec:freedom}) and not scored as results.
+
   The layer may reach a number by routes the skills neither offer nor forbid, such as importing the
   tools in Python or writing its own state file. One rule, fixed before the first run, decides what
   counts as from the tools: a number that appears in a tool's output in the session, or verbatim in
-  the twin's unmodified state and domain-knowledge files. A number computed on a state file the
+  the unmodified state and domain-knowledge files. A number computed on a state file the
   layer wrote, or by its own code rather than a tool, is not.
 
   \subsection{The improved skills}
@@ -197,7 +209,7 @@
   the answer repeats.
 
   The control questions check that the change leaves them unchanged. A number a script prints from a tool's output counts as a tool
-  output, a number the script computes does not. The improved skills name nothing from
+  output, but a number the script computes does not. The improved skills name nothing from
   the question set. They were written after the original answers had been read, so two
   questions were added afterwards and asked of them unchanged (\Cref{sec:results-unseen}). One line, that the thresholds jump where the batch's phase
   changes, describes the tool but bears on I5.
@@ -213,11 +225,11 @@
   \label{sec:metrics}
 
   \textbf{Closeness, part (a).} Scored on the inverse questions, with the control questions as a
-  baseline. The value an operator would act on is taken literally in seconds (``about four
-  minutes'' is 240 s, for a range, the end acted on). The metric is its signed distance from the
+  check. The value an operator would act on is taken literally in seconds (``about four
+  minutes'' is 240 s, and for a range it is the end acted on). The metric is its signed distance from the
   raw reference, as an optimality gap measures an optimiser against a known optimum
-  \cite{yang2024opro}, with whether it gets the same verdict and whether it also meets the guarded
-  reference. The sign carries the risk: a longer duration or an earlier opening than the reference
+  \cite{yang2024opro}. Alongside it are whether the answer gets the same verdict and whether it
+  also meets the guarded reference. The sign carries the risk: a longer duration or an earlier opening than the reference
   names one the tools judge worse. I3 is scored on whether the answer finds no limit within the
   tool's range, I4 on whether the chosen time is among those the tools cannot tell apart from the
   best. Declined answers are counted separately.
@@ -227,7 +239,7 @@
   each claim without a number is checked by hand, as attribution to identified sources
   \cite{rashkin2023ais} and atomic-fact checking \cite{min2023factscore} do. Each is classed as from a tool, not from a tool
   but labelled, or not from a tool and unlabelled. A label names the source in the same or the next
-  sentence, such as ``general knowledge'', a hedge such as ``about'' is not one. A searched value
+  sentence, such as ``general knowledge''. A hedge such as ``about'' is not one. A searched value
   counts as two claims: the value is from a tool if a call supports it, but that it is the longest,
   earliest or best is the layer's own search step and needs a label. A question outside the twin is
   scored on whether the answer says which part the twin does not cover. This is close to

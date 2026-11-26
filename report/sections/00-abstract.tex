@@ -1,0 +1,21 @@
+  \begin{abstract}
+  This project adds a natural-language advisory layer to an existing digital twin of a tempeh
+  incubator without changing how the twin computes. The layer is a large language model, Claude
+  Opus 5.5, working through wrapper tools and guided by skills, the instructions it follows. When
+  the twin needs to answer a new kind of question, should the answer be coded as a new tool or
+  delegated to the model over the existing tools? Inverse questions, such as how long the lid can
+  stay open or when to open it, were answered by a search coded over the twin's tools and by the
+  model, with skills that describe such a search, with skills that do not, and without skills.
+  Answers were scored against an exhaustive search over the same tools and on whether their
+  numbers came from the tools. With skills that describe the search, the model reached the
+  reference in every scored run, in 53 of 54 repeats and on two questions written after the
+  skills, and invented no value where none could be given. It took time of the same order as the
+  coded search but 194 to 473 thousand input tokens per answer, against 130 to 138 thousand for
+  one tool call. Unlike the coded search, it went to the exact limit with no margin for the
+  simulation's resolution, and rarely labelled a searched value as its own in the same sentence.
+  With skills that describe no search the model asked back and mostly stopped short, and without
+  skills it found most limits but went past what the twin computes. For this twin, a new question
+  is best delegated, with its kind described in the skill, and a search is worth coding when its
+  question recurs, needs a margin for the simulation's resolution or must give the same answer
+  every time.
+  \end{abstract}

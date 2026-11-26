@@ -8,7 +8,7 @@
   \subsection{LLMs over simulations and DTs}
   \label{sec:related-dt}
 
-  Kleiman et al.\ build a framework on the pairing of the two, placing an agent between the user
+  Kleiman et al.\ build a framework on the pairing of an LLM with a simulation, placing an agent between the user
   and an existing simulation \cite{kleiman2025simulationagent}. Such a layer adds \emph{access},
   turning the user's question into a correctly configured run, and \emph{interpretation}, turning
   the result into an explanation the user can act on, without the model needing to know the
@@ -17,20 +17,20 @@
   output is reduced to compact summaries before the model sees it, because a full time series
   exceeds what a model can usefully consume.
 
-  Later work gives the model more to decide. Ndum et al.\ add an LLM to the DT
-  of an advanced nuclear reactor, it calls the twin's tools and draws on domain knowledge to
+  Other work gives the model more to decide. Ndum et al.\ add an LLM to the DT
+  of an advanced nuclear reactor. It calls the twin's tools and draws on domain knowledge to
   suggest operating steps, while the operator keeps the decision \cite{ndum2026aroma}. Xia et al.\
   let LLM agents run a twin's simulation repeatedly to find parameter settings that
-  meet an objective, shown in a case study with systematic evaluation left for later
+  meet an objective, and show this in a case study, leaving systematic evaluation for later
   \cite{xia2024llmsimulation}. This is the closest precedent for the inverse questions here: the
   model itself searches over a simulation it cannot change.
 
   Mylonas et al.\ go the other way, in an agentic twin for a power-grid control room
-  \cite{mylonas2026governance}. The model may only select and configure whitelisted analysis
-  tools, and a governance layer outside its control renders every number in an answer from the
-  tools' results and holds back any action with side effects until an operator approves it. On
-  their benchmark of 118 tasks the rules held in every run, with the layer removed, only 39.2\%
-  of answers carried numbers the tools supported. Where an answer's numbers come from is thus
+  \cite{mylonas2026governance}. Their model chooses tools from an approved list and sets their
+  arguments, but code outside its control writes the numbers into each answer from the tools'
+  results and makes any action with side effects wait for an operator's approval. These rules
+  held in every run of a 118-task benchmark, and without that code only 39.2\% of answers had
+  numbers the tools supported. Where an answer's numbers come from is thus
   measured there, but enforced in code. In this project it rests on the skills' instructions,
   which the model can depart from, and that is why part (a) of the research question measures it.
 
@@ -49,8 +49,8 @@
   the strongest models included \cite{valmeekam2023planbench}. Guan et al.\ therefore have the
   model write a formal model of the domain and leave the search to a sound planner, with the model
   translating between the planner and the user \cite{guan2023worldmodels}. The heater-boost
-  advisory makes the same split (\Cref{sec:boost}): its search for the lowest boost runs in the
-  tool layer, and a shorter opening is suggested but not searched for. For an inverse question with
+  advisory also keeps the search out of the model (\Cref{sec:boost}): its search for the lowest
+  boost is coded in the tool layer, and a shorter opening is suggested but not searched for. For an inverse question with
   no tool behind it, the choice is between coding such a search in advance and leaving it to the
   model, and the research question compares the two.
 
@@ -59,7 +59,7 @@
 
   None of these studies compares a model's own search over a twin's simulation with a search coded
   over the same tools, in accuracy or in cost, and the one that measures where an answer's numbers
-  come from does so behind a layer the model cannot bypass. This project does both for a layer
+  come from does so behind a layer the model cannot bypass \cite{mylonas2026governance}. This project does both for a layer
   made only of skills, which instruct the model but do not constrain it. It measures how close the
   model's searched answers come to a coded search and whether it says which parts the tools did not
   produce, and what leaving the search to the model costs and saves compared with coding it

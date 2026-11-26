@@ -23,14 +23,12 @@
       \label{tab:sources}
   \end{table}
 
-  \textbf{The DT's models.} Four modules are taken from the twin: two plants, one
-  carrying the air temperature and the box's heat loss and one adding the heater element, the
+  \textbf{The DT's models.} Four modules are taken from the twin: two plant models (one
+  for the air temperature and the box's heat loss, one that adds the heater element), the
   controller's switching logic, and the wrapper that makes that logic a model the solver can run
   \cite{gomes2025incubator}. They are used exactly as the twin defines them. Their calibrated
   parameters arrive with the current state rather than being written into this code, so a
-  recalibration on the twin's side reaches the advisory with nothing here edited.
-
-  The parameters were fitted
+  recalibration on the twin's side reaches the advisory with nothing here edited. The parameters were fitted
   with the box empty and the lid closed, and room temperature is held constant over the horizon.
 
   \textbf{The current state.} A single document stands in for what the twin publishes about the
@@ -41,7 +39,7 @@
 
   \textbf{Domain knowledge.} One document holds what the twin does not (\Cref{tab:domain}). The
   temperature values follow the tempeh literature
-  \cite{steinkraus1960tempeh,tempehinfo_temperature}, the bands, budgets and heater limits are
+  \cite{steinkraus1960tempeh,tempehinfo_temperature}. The bands, budgets and heater limits are
   reasoned values adopted for this system and marked as estimated. None has been calibrated
   against a batch that actually spoiled.
 
@@ -82,22 +80,12 @@
 
 
 
-  \subsection{Tool helpers}
-  \label{sec:helpers}
-
-  Two small modules stand between the sources and the simulation. Neither decides anything. They
-  make the sources available in a form the simulation can use.
-
-  \textbf{Reading the state.} The first opens the state document and validates it. It is the only
-  place that document is read, so a state that is malformed, incomplete or internally inconsistent
-  fails here with a clear message rather than reaching a simulation and producing a plausible
-  wrong answer.
-
-  \textbf{Reading the domain knowledge.} The second loads the thresholds in \Cref{tab:domain} and
-  answers two questions: which phase of fermentation the batch has reached, derived from how long
-  it has been running since an incubator has no sensor for it, and which temperature band counts
-  as safe in that phase. Both are needed before a trajectory means anything, which is why they are
-  settled here rather than downstream.
+  \textbf{Reading the sources.} Two small modules make the sources usable and decide nothing. The
+  first, the state access of \Cref{fig:architecture}, is the only place the state document is
+  read. It validates the document, so a malformed, incomplete or inconsistent state fails with a
+  clear message instead of producing a plausible wrong answer. The second loads the thresholds in
+  \Cref{tab:domain} and derives the batch's phase from how long it has been running, because an
+  incubator has no sensor for it, and with it the band that counts as safe.
 
   \subsection{The simulation tool}
   \label{sec:simulation}
@@ -110,7 +98,7 @@
   the starting temperatures, the room temperature, the controller settings, the calibrated
   parameters and the open-lid disturbance. The skills have the language layer choose which opening
   to simulate, not the conditions it starts from, although the tool can be pointed at another
-  state file, a route \Cref{sec:runs} returns to. An opening of zero length gives the undisturbed baseline,
+  state file, a route \Cref{sec:runs} returns to. An opening of zero length gives the undisturbed prediction,
   so the same tool also answers what happens if the lid stays shut. A negative duration, an opening
   longer than six hours or a state that fails validation is refused with a plain message, and
   nothing is replaced by a default.
@@ -126,31 +114,22 @@
   \textbf{What it returns.} A result has three parts. The summary holds the numbers an answer is
   built from: the lowest air temperature and when it occurs, the total drop, the peak heater
   temperature, the time to recover, and the time spent outside the safe band. The trajectory is
-  thinned to about a hundred points, which is the reduction step described in
-  \Cref{sec:related-dt}, every number is still computed on the full solver grid. The inputs record
+  thinned to about a hundred points, the reduction step described in
+  \Cref{sec:related-dt}, but every number is still computed on the full solver grid. That grid has a sample about every
+  3.1 s, so a time such as the time below the band changes in steps of that size. This is the
+  simulation's resolution: a margin smaller than one step can flip with a fraction of a second
+  more or less. The inputs record
   lists what was actually used, including the fermentation phase and the safe band that applied.
   The tool computes and does not interpret: whether any of this is acceptable for the batch is
   decided by the risk assessment (\Cref{sec:analysis}).
 
-  \textbf{Why this suits the language layer.} Three properties make the tool usable by a model
-  that must not compute on its own:
-
-  \begin{itemize}
-    \item \textbf{It is phrased in the operator's terms.} A duration and a start time are all a call
-      needs, so turning a question into a call requires no knowledge of thermal parameters. This
-      removes the first obstacle in \Cref{sec:gap}.
-    \item \textbf{Every number carries its assumptions.} Because the inputs record is part of the
-      result, an explanation can state what a prediction rests on, such as the phase the batch was
-      judged to be in, without the model reconstructing it.
-    \item \textbf{It follows the twin.} Parameters and controller settings arrive with the state, so
-      after the twin recalibrates or re-tunes its controller (\Cref{sec:incubator-dt}), the next
-      prediction uses the new values with nothing here changed. And because an opening is only a
-      duration and a start time, a question can be explored by comparison, such as opening now
-      against opening later, the same pattern of repeated calls the heater-boost advisory builds
-      on (\Cref{sec:architecture}).
-  \end{itemize}
-
-  % These three properties are what the discussion (sec:flexibility) tests.
+  \textbf{Why this suits the language layer.} A call needs only a duration and a start time, so
+  turning a question into a call requires no knowledge of thermal parameters, which removes the
+  first obstacle in \Cref{sec:gap}. The inputs record lets an answer state what a prediction rests
+  on, such as the phase the batch was judged to be in, without the model reconstructing it. And
+  because an opening is only two numbers, a question can be explored by repeated calls, such as
+  opening now against opening later, the pattern the heater-boost advisory and every search build
+  on.
 
   \subsection{The risk assessment}
   \label{sec:analysis}
@@ -158,12 +137,12 @@
   The risk assessment turns the simulation's numbers into a verdict about the batch, using rules in
   ordinary code so that the thresholds behind a verdict are stated rather than inferred. From the
   batch's age when the lid opens it takes the phase, so a later opening is judged in the phase it
-  falls in, and from \Cref{tab:domain} that phase's safe air band,
-  its cold tolerance, and the two exposure budgets that the tolerance scales, so a young batch is
+  falls in. From \Cref{tab:domain} it then takes that phase's safe air band,
+  its cold tolerance and the two exposure budgets that the tolerance scales, so a young batch is
   treated as less forgiving than one generating its own heat.
 
   Time below the band within the first budget is safe, between the two budgets recoverable, and
-  beyond the second high risk, time above the band but under the damage ceiling of
+  beyond the second high risk. Time above the band but under the damage ceiling of
   42 \si{\celsius} turns an otherwise safe verdict into recoverable. Air above the ceiling, which
   an open lid cannot cause but the heater boost could, and a run that never returns to the
   setpoint are both high risk, the second because recovery cannot be confirmed, not because harm
@@ -188,12 +167,12 @@
   program of our own sits between the operator and the tool.
 
   What the document fixes is how far the model's discretion reaches. The model may recognise that
-  a question concerns the lid, read the opening as a duration, and choose the words, it may not
+  a question concerns the lid, read the opening as a duration and choose the words. It may not
   fill in what the operator left out, and a question the tool will not accept returns to the
   operator instead of being completed by the model. The rest is relayed: every number in an answer
   must appear in the tool's output. The answer is short and in a fixed order: the verdict with the
   reason that decided it, what happens to the air, and for a recoverable opening how long to keep
-  the lid shut. It ends by offering the limitations, the caveats and the standing of the thresholds
+  the lid shut. It ends by offering the limitations. The caveats and the standing of the thresholds
   (\Cref{sec:sources}) are explained only when asked for, and then never softened.
 
   \subsection{The heater-boost advisory}
@@ -223,7 +202,7 @@
   but clears the budget by 3.0 s against a sample interval of 3.1 s and is rejected.
 
   The advisory is a second skill, separate from the first, so it was added on top of the same
-  tools without changing the twin or the lid-opening advisory, how far this carries is discussed
+  tools without changing the twin or the lid-opening advisory. How far this carries is discussed
   in \Cref{sec:generality}. Its rules follow \Cref{sec:skill},
   with two additions: the plan is passed on exactly as returned, together with how narrowly it
   clears the budget, and when no boost works a shorter opening is suggested but not searched for,
