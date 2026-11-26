@@ -55,3 +55,52 @@ How to rerun the questions so the answers can be compared with the report.
 
 The report asked U1 and U2 with the improved skills only, and O1 to O3 with the original skills
 only.
+
+## Results to compare with
+
+From the report (Claude Opus 5.5, effort high, Claude Code in VS Code). These are the improved
+skills' answers, except O1 to O3, which were asked with the original skills only. Verdicts: A
+safe, B recoverable, C high risk. "Below band" means seconds the air spends below the safe band.
+
+| ID | Answer |
+|---|---|
+| F1 | A. Air low 23.81 °C at 126 s, never leaves the band; back at the setpoint 192.1 s after closing |
+| F2 | B. 340 s below band (A budget 300 s, B budget 450 s); low 23.91 °C; keep the lid shut 4 min after closing |
+| F3 | C without a boost (489 s). Plan: setpoint 34 °C, wait 351 s, open 300 s, reset to 31 °C, keep shut 360 s. Then B (441 s) |
+| I1 | 253 s, A (299.7 s below band); 254 s is B |
+| I2 | 245 s, B (449.7 s); 246 s is C; keep the lid shut 8 min after closing |
+| I3 | No limit: every opening is A up to the tool's maximum of 6 h; longer is refused |
+| I4 | Open at 533 s: B, 336.6 s (the best; no start gives A, timing changes little) |
+| I5 | 28,800 s (8 h, when the batch enters active growth): A, 666.6 s vs 1,050 s; 28,799 s is C |
+| I6 | 310 s with a boost to 35 °C, wait 426 s: B, 446 s vs 450 s; 311 s finds no plan |
+| O1 | Ready after about 24 h, plus general advice. Did not say the twin cannot answer this |
+| O2 | No forecast available; heater can cope with a cooler room if the lid stays shut |
+| O3 | Cannot say anything about taste; the tool rates the opening B |
+| N1 | No: every start in the hour is C (828 to 832 s vs 450 s); least bad start 2,100 s |
+| N2 | No temperature given: the tool cannot vary the room. At 22.4 °C, 10 min is C (646 s) |
+| U1 | Open at 530 s for 264 s: A (297 s); 1,286 s also allows 264 s |
+| U2 | 253 s, A at all five start times (12 min is the tightest) |
+
+## Tokens used
+
+Same runs as above, one run per question. Input tokens include the cached ones, which are most
+of them: the assistant's own instructions and the skill are re-read at every model call.
+
+| ID | Input tokens | Output tokens |
+|---|---|---|
+| F1 | 135,591 | 486 |
+| F2 | 135,732 | 527 |
+| F3 | 138,407 | 746 |
+| I1 | 361,007 | 2,907 |
+| I2 | 302,984 | 2,115 |
+| I3 | 193,900 | 1,538 |
+| I4 | 400,989 | 3,051 |
+| I5 | 472,636 | 3,757 |
+| I6 | 432,779 | 4,142 |
+| O1 | 128,981 | 1,279 |
+| O2 | 290,571 | 5,489 |
+| O3 | 176,633 | 1,258 |
+| N1 | 346,947 | 2,642 |
+| N2 | 182,754 | 1,186 |
+| U1 | 774,687 | 6,420 |
+| U2 | 241,994 | 2,919 |
